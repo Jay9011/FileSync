@@ -1,0 +1,55 @@
+﻿<Page x:Class="S1FileSync.Views.SettingsView"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:S1FileSync.Views"
+      mc:Ignorable="d" 
+      d:DesignHeight="450" d:DesignWidth="800"
+      Title="SettingsView">
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Remote Location:" VerticalAlignment="Center"></TextBlock>
+        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Settings.RemoteLocation}" Margin="5"></TextBox>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Local Location:" VerticalAlignment="Center"></TextBlock>
+        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Settings.LocalLocation}" Margin="5"></TextBox>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="File Extensions:" VerticalAlignment="Center"></TextBlock>
+        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Settings.FileExtensions}" Margin="5"></TextBox>
+
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Sync Interval (minutes):" VerticalAlignment="Center"></TextBlock>
+        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Settings.SyncInterval}" Margin="5"></TextBox>
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Username:" VerticalAlignment="Center"></TextBlock>
+        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Settings.Username}" Margin="5"></TextBox>
+
+        <TextBlock Grid.Row="5" Grid.Column="0" Text="Password:" VerticalAlignment="Center"></TextBlock>
+        <PasswordBox Grid.Row="5" Grid.Column="1" x:Name="PasswordBox" Margin="5"></PasswordBox>
+
+        <Button Grid.Row="6" Grid.Column="1" Content="Save Settings" Command="{Binding SaveSettingsCommand}" Margin="5"></Button>
+
+        <Button Grid.Row="7" Grid.Column="1" Content="Test Connection" Command="{Binding TestConnectionCommand}" Margin="5"></Button>
+        <TextBlock Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
+                   Text="{Binding ConnectionStatus}"
+                   FontWeight="Bold"
+                   Margin="5"></TextBlock>
+
+    </Grid>
+</Page>
