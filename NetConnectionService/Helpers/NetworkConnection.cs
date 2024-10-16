@@ -1,28 +1,32 @@
 ﻿using System.ComponentModel;
 using System.Net;
-using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
-using System.Security.AccessControl;
+using NetConnectionService.Models;
 
-namespace FileSyncApp.Core.Helpers;
+namespace NetConnectionService.Helpers;
 
 public class NetworkConnection : IDisposable
 {
     private string _networkName;
 
+    /// <summary>
+    /// 네트워크 연결 생성
+    /// </summary>
+    /// <param name="networkName">네트워크 주소</param>
+    /// <param name="credential">인증 정보</param>
+    /// <exception cref="Win32Exception">연결 실패 예외</exception>
     public NetworkConnection(string networkName, NetworkCredential credential)
     {
         _networkName = networkName;
 
-        var netResource = new NativeMethods.NetResource()
+        var netResource = new WinNet.NetResource()
         {
-            Scope = NativeMethods.ResourceScope.GlobalNetwork,
-            ResourceType = NativeMethods.ResourceType.Disk,
-            DisplayType = NativeMethods.ResourceDisplaytype.Share,
+            Scope = WinNet.ResourceScope.GlobalNetwork,
+            ResourceType = WinNet.ResourceType.Disk,
+            DisplayType = WinNet.ResourceDisplayType.Share,
             RemoteName = networkName
         };
-        
-        var result = NativeMethods.WNetAddConnection2(
+
+        var result = WinNet.WNetAddConnection2(
             netResource,
             credential.Password,
             credential.UserName,
@@ -47,6 +51,6 @@ public class NetworkConnection : IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        NativeMethods.WNetCancelConnection2(_networkName, 0, true);
+        WinNet.WNetCancelConnection2(_networkName, 0, true);
     }
 }

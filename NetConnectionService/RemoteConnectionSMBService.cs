@@ -1,8 +1,8 @@
 ﻿using System.IO;
 using System.Net;
-using FileSyncApp.Core.Helpers;
+using NetConnectionService.Helpers;
 
-namespace FileSyncApp.Core;
+namespace NetConnectionService;
 
 public class RemoteConnectionSMBService : IRemoteConnectionService
 {
@@ -10,7 +10,7 @@ public class RemoteConnectionSMBService : IRemoteConnectionService
     {
         try
         {
-            string uncPath = $@"\\{server}";
+            string uncPath = GetUncPath(server);
 
             // 네트워크 자격 증명
             using (new NetworkConnection(uncPath, new NetworkCredential(username, password)))
@@ -52,5 +52,10 @@ public class RemoteConnectionSMBService : IRemoteConnectionService
         }
 
         return (false, "Connection failed");
+    }
+
+    private string GetUncPath(string server)
+    {
+        return server.StartsWith(@"\\") ? server : $@"\\{server}";
     }
 }

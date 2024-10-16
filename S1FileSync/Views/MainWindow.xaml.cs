@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Microsoft.Extensions.DependencyInjection;
 using S1FileSync.ViewModels;
 using S1FileSync.Views;
 
@@ -15,11 +16,16 @@ namespace S1FileSync
 {
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        private readonly IServiceProvider _serviceProvider;
+        
+        public MainWindow(IServiceProvider serviceProvider, MainViewModel mainViewModel)
         {
             InitializeComponent();
-            DataContext = new MainViewModel();
-            SettingsFrame.Navigate(new SettingsView());
+            _serviceProvider = serviceProvider;
+            DataContext = mainViewModel;
+            
+            var settingsView = _serviceProvider.GetService<SettingsView>();
+            SettingsFrame.Navigate(settingsView);
         }
 
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)

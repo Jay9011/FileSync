@@ -1,16 +1,19 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using FileSyncApp.Core;
+using NetConnectionService;
 using S1FileSync.ViewModels;
 
 namespace S1FileSync.Views
 {
     public partial class SettingsView : Page
     {
-        public SettingsView()
+        private readonly SettingsViewModel _viewModel;
+        
+        public SettingsView(SettingsViewModel viewModel)
         {
             InitializeComponent();
-            DataContext = new SettingsViewModel(new RemoteConnectionSMBService());
+            _viewModel = viewModel;
+            DataContext = _viewModel;
             PasswordBox.PasswordChanged += PasswordBox_PasswordChanged;
         }
 

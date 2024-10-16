@@ -1,4 +1,7 @@
-﻿namespace S1FileSync.Models;
+﻿using System.Text.RegularExpressions;
+using S1FileSync.Helpers;
+
+namespace S1FileSync.Models;
 
 public class SyncSettings
 {
@@ -22,9 +25,37 @@ public class SyncSettings
     /// 확장자 저장용
     /// </summary>
     public string FileExtensions { get; set; }
+
     /// <summary>
     /// 동기화 주기
     /// </summary>
-    public TimeSpan SyncInterval { get; set; }
-    
+    private string _syncInterval;
+    public string SyncInterval
+    {
+        get => _syncInterval;
+        set
+        {
+            if (TimeSpanHelper.IsValidTimeSpanFormat(value))
+            {
+                _syncInterval = TimeSpanHelper.ParseTimeSpan(value).ToString();
+            }
+            else
+            {
+                throw new ArgumentException("Invalid TimeSpan format. Expected format: [dd.]hh:mm:ss");
+            }
+        }
+    }
+    public TimeSpan SyncIntervalTimeSpan => TimeSpanHelper.ParseTimeSpan(SyncInterval);
+}
+
+public static class ConstSettings
+{
+    public const string Settings = "Settings";
+    public const string RemoteLocation = "RemoteLocation";
+    public const string Username = "Username";
+    public const string Password = "Password";
+    public const string LocalLocation = "LocalLocation";
+    public const string FileExtensions = "FileExtensions";
+    public const string SyncInterval = "SyncInterval";
+    public const string DefaultSyncInterval = "1.00:00:00";
 }

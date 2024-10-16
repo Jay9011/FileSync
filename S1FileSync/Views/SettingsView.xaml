@@ -22,6 +22,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition />
         </Grid.RowDefinitions>
 
@@ -34,8 +35,8 @@
         <TextBlock Grid.Row="2" Grid.Column="0" Text="File Extensions:" VerticalAlignment="Center"></TextBlock>
         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Settings.FileExtensions}" Margin="5"></TextBox>
 
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="Sync Interval (minutes):" VerticalAlignment="Center"></TextBlock>
-        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Settings.SyncInterval}" Margin="5"></TextBox>
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Sync Interval :" VerticalAlignment="Center"></TextBlock>
+        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding SyncIntervalString}" Margin="5"></TextBox>
 
         <TextBlock Grid.Row="4" Grid.Column="0" Text="Username:" VerticalAlignment="Center"></TextBlock>
         <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Settings.Username}" Margin="5"></TextBox>
@@ -44,9 +45,11 @@
         <PasswordBox Grid.Row="5" Grid.Column="1" x:Name="PasswordBox" Margin="5"></PasswordBox>
 
         <Button Grid.Row="6" Grid.Column="1" Content="Save Settings" Command="{Binding SaveSettingsCommand}" Margin="5"></Button>
+        
+        <Button Grid.Row="7" Grid.Column="1" Content="Sync Settings" Command="{Binding SyncSettingsCommand}" Margin="5"></Button>
 
-        <Button Grid.Row="7" Grid.Column="1" Content="Test Connection" Command="{Binding TestConnectionCommand}" Margin="5"></Button>
-        <TextBlock Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
+        <Button Grid.Row="8" Grid.Column="1" Content="Test Connection" Command="{Binding TestConnectionCommand}" Margin="5"></Button>
+        <TextBlock Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2"
                    Text="{Binding ConnectionStatus}"
                    FontWeight="Bold"
                    Margin="5"></TextBlock>

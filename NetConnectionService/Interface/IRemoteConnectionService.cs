@@ -1,4 +1,4 @@
-﻿namespace FileSyncApp.Core;
+﻿namespace NetConnectionService;
 
 public interface IRemoteConnectionService
 {
