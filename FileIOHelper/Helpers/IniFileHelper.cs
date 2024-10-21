@@ -1,14 +1,14 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text;
-using FileIOService.Services.Interface;
+using FileIOHelper;
 
-namespace FileIOService
+namespace FileIOHelper.Helpers
 {
-    public class IniFileService : IIniFileService, IFileIOService
+    public class IniFileHelper : IIniFileHelper, IFileIOHelper
     {
         private string _filePath;
         
-        public IniFileService(string filePath)
+        public IniFileHelper(string filePath)
         {
             _filePath = filePath;
         }
@@ -24,7 +24,12 @@ namespace FileIOService
             int i = GetPrivateProfileString(section, key, defaultValue, sb, 255, _filePath);
             return sb.ToString();
         }
-        
+
+        public string GetFilePath()
+        {
+            return _filePath;
+        }
+
         public string ReadAllText(string path)
         {
             return File.ReadAllText(path);

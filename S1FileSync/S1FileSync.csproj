@@ -27,8 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FileIOService\FileIOService.csproj" />
-    <ProjectReference Include="..\NetConnectionService\NetConnectionService.csproj" />
+    <ProjectReference Include="..\FileIOHelper\FileIOHelper.csproj" />
+    <ProjectReference Include="..\NetConnectionHelper\NetConnectionHelper.csproj" />
   </ItemGroup>
 
 </Project>

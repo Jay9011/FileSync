@@ -1,6 +1,6 @@
-﻿namespace FileIOService;
+﻿namespace FileIOHelper;
 
-public interface IFileIOService
+public interface IFileIOHelper
 {
     /// <summary>
     /// 파일 읽기

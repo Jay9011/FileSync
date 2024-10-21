@@ -1,15 +1,15 @@
-
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using NetConnectionHelper.Interface;
 
-namespace NetConnectionService
+namespace NetConnectionHelper
 {
-    public class RemoteConnectionHttpService : IRemoteConnectionService
+    public class RemoteConnectionHttpHelper : IRemoteConnectionHelper
     {
         private readonly HttpClient _httpClient;
 
-        public RemoteConnectionHttpService()
+        public RemoteConnectionHttpHelper()
         {
             _httpClient = new HttpClient();
         }
@@ -21,7 +21,7 @@ namespace NetConnectionService
         /// <param name="username">사용자 이름</param>
         /// <param name="password">비밀번호</param>
         /// <returns>연결 성공 여부</returns>
-        public async Task<(bool, string)> TestConnectionAsync(string server, string username, string password)
+        public async Task<(bool, string)> ConnectionAsync(string server, string username, string password)
         {
             try
             {
@@ -43,6 +43,11 @@ namespace NetConnectionService
             {
                 return (false, e.Message);
             }
+        }
+
+        public string GetRightPath(string server)
+        {
+            throw new NotImplementedException();
         }
     }
 

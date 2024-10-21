@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel;
 using System.Net;
-using NetConnectionService.Models;
+using NetConnectionHelper.Models;
 
-namespace NetConnectionService.Helpers;
+namespace NetConnectionHelper.Helpers;
 
 public class NetworkConnection : IDisposable
 {

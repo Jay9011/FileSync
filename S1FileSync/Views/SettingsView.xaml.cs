@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using NetConnectionService;
+using NetConnectionHelper;
 using S1FileSync.ViewModels;
 
 namespace S1FileSync.Views

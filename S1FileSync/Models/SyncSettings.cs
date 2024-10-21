@@ -46,6 +46,16 @@ public class SyncSettings
         }
     }
     public TimeSpan SyncIntervalTimeSpan => TimeSpanHelper.ParseTimeSpan(SyncInterval);
+    
+    public SyncSettings()
+    {
+        RemoteLocation = string.Empty;
+        Username = string.Empty;
+        Password = string.Empty;
+        LocalLocation = string.Empty;
+        FileExtensions = string.Empty;
+        SyncInterval = ConstSettings.DefaultSyncInterval;
+    }
 }
 
 public static class ConstSettings

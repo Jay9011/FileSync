@@ -1,12 +1,11 @@
-﻿using System.Configuration;
-using System.Data;
-using System.IO;
+﻿using System.IO;
 using System.Windows;
-using FileIOService;
-using FileIOService.Services.Interface;
+using FileIOHelper;
+using FileIOHelper.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using NetConnectionService;
+using NetConnectionHelper;
+using NetConnectionHelper.Interface;
 using S1FileSync.Services;
 using S1FileSync.Services.Interface;
 using S1FileSync.ViewModels;
@@ -32,12 +31,21 @@ namespace S1FileSync
         
         protected override async void OnStartup(StartupEventArgs e)
         {
-            await _host.StartAsync();
+            try
+            {
+                await _host.StartAsync();
             
-            var mainWindow = _host.Services.GetRequiredService<MainWindow>();
-            mainWindow.Show();
+                var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+                mainWindow.Show();
             
-            base.OnStartup(e);
+                base.OnStartup(e);
+            }
+            catch (Exception exception)
+            {
+                File.WriteAllText("error_log.txt", exception.ToString());
+                MessageBox.Show($"An error occurred: {exception.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Shutdown();
+            }
         }
 
         protected override async void OnExit(ExitEventArgs e)
@@ -61,19 +69,20 @@ namespace S1FileSync
             services.AddTransient<SettingsViewModel>();
 
             // Services
-            services.AddSingleton<IRemoteConnectionService, RemoteConnectionSMBService>();
+            services.AddSingleton<IRemoteConnectionHelper, RemoteConnectionSmbHelper>();
             services.AddSingleton<IPopupService, WindowPopupService>();
-            services.AddSingleton<IIniFileService>(sp => new IniFileService(Path.Combine(Directory.GetCurrentDirectory(), "settings.ini")));
+            services.AddSingleton<IIniFileHelper>(sp => new IniFileHelper(Path.Combine(Directory.GetCurrentDirectory(), "settings.ini")));
+            services.AddSingleton<ISettingsService, SettingsService>();
 
             // Helpers
-            services.AddTransient<IniFileService>();
+            services.AddTransient<IniFileHelper>();
             
             // dependencies
             services.AddTransient<SettingsViewModel>(sp =>
                 new SettingsViewModel(
-                    sp.GetRequiredService<IRemoteConnectionService>(),
+                    sp.GetRequiredService<IRemoteConnectionHelper>(),
                     sp.GetRequiredService<IPopupService>(),
-                    sp.GetRequiredService<IIniFileService>()
+                    sp.GetRequiredService<ISettingsService>()
                 ));
         }
     }

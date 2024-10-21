@@ -1,6 +1,6 @@
-﻿namespace FileIOService.Services.Interface;
+﻿namespace FileIOHelper;
 
-public interface IIniFileService
+public interface IIniFileHelper
 {
     /// <summary>
     /// ini파일에 값을 쓴다.
@@ -16,4 +16,9 @@ public interface IIniFileService
     /// <param name="key">설정 키</param>
     /// <returns>설정 값</returns>
     string ReadValue(string section, string key, string defaultValue = "");
+    /// <summary>
+    /// 파일 위치를 반환한다.
+    /// </summary>
+    /// <returns></returns>
+    string GetFilePath();
 }

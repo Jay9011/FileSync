@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Input;
-using FileIOService.Services.Interface;
-using NetConnectionService;
+using FileIOHelper;
+using NetConnectionHelper.Interface;
 using S1FileSync.Helpers;
 using S1FileSync.Models;
 using S1FileSync.Services.Interface;
@@ -12,8 +12,8 @@ public class SettingsViewModel : ViewModelBase
 {
     #region 의존 주입
 
-    private readonly IRemoteConnectionService _connectionService;
-    private readonly IIniFileService _iniFileService;
+    private readonly IRemoteConnectionHelper _connectionHelper;
+    private readonly ISettingsService _settingsService;
     private readonly IPopupService _popupService;
 
     #endregion
@@ -55,18 +55,17 @@ public class SettingsViewModel : ViewModelBase
     public ICommand TestConnectionCommand { get; set; }
     public ICommand SyncSettingsCommand { get; set; }
 
-    public SettingsViewModel(IRemoteConnectionService connectionService, IPopupService popupService, IIniFileService iniFileService)
+    public SettingsViewModel(IRemoteConnectionHelper connectionHelper, IPopupService popupService, ISettingsService settingsService)
     {
         #region 의존 주입
 
-        _connectionService = connectionService;
-        _iniFileService = iniFileService;
+        _connectionHelper = connectionHelper;
         _popupService = popupService;
+        _settingsService = settingsService;
 
         #endregion
             
-        Settings = new SyncSettings();
-        LoadSettingsFromIni();
+        LoadSettings();
         
         TestConnectionCommand = new RelayCommand(async () => await TestConnectionAsync());
         SaveSettingsCommand = new RelayCommand(SaveSettings);
@@ -78,30 +77,16 @@ public class SettingsViewModel : ViewModelBase
     /// </summary>
     private void SaveSettings()
     {
-        _iniFileService.WriteValue(ConstSettings.Settings, ConstSettings.RemoteLocation, Settings.RemoteLocation);
-        _iniFileService.WriteValue(ConstSettings.Settings, ConstSettings.LocalLocation, Settings.LocalLocation);
-        _iniFileService.WriteValue(ConstSettings.Settings, ConstSettings.FileExtensions, Settings.FileExtensions);
-        _iniFileService.WriteValue(ConstSettings.Settings, ConstSettings.SyncInterval, Settings.SyncInterval);
-        
-        _iniFileService.WriteValue(ConstSettings.Settings, ConstSettings.Username, Settings.Username);
-        // TODO: 추후 암호화 처리
-        _iniFileService.WriteValue(ConstSettings.Settings, ConstSettings.Password, Settings.Password);
+        _settingsService.SaveSettings(Settings);
     }
     
     /// <summary>
     /// ini 파일에서 설정을 불러오는 함수
     /// </summary>
     /// <exception cref="NotImplementedException"></exception>
-    private void LoadSettingsFromIni()
+    private void LoadSettings()
     {
-        Settings.RemoteLocation = _iniFileService.ReadValue(ConstSettings.Settings, ConstSettings.RemoteLocation);
-        Settings.LocalLocation = _iniFileService.ReadValue(ConstSettings.Settings, ConstSettings.LocalLocation);
-        Settings.FileExtensions = _iniFileService.ReadValue(ConstSettings.Settings, ConstSettings.FileExtensions);
-        Settings.SyncInterval = _iniFileService.ReadValue(ConstSettings.Settings, ConstSettings.SyncInterval);
-        
-        Settings.Username = _iniFileService.ReadValue(ConstSettings.Settings, ConstSettings.Username);
-        // TODO: 추후 암호화 처리
-        Settings.Password = _iniFileService.ReadValue(ConstSettings.Settings, ConstSettings.Password);
+        Settings = _settingsService.LoadSettings();
     }
     
     /// <summary>
@@ -109,7 +94,8 @@ public class SettingsViewModel : ViewModelBase
     /// </summary>
     private void SyncSettings()
     {
-        LoadSettingsFromIni();
+        _settingsService.SyncSettings();
+        LoadSettings();
     }
     
     /// <summary>
@@ -118,7 +104,7 @@ public class SettingsViewModel : ViewModelBase
     private async Task TestConnectionAsync()
     {
         ConnectionStatus = "Testing connection...";
-        (bool, string) isConnected = await _connectionService.TestConnectionAsync(
+        (bool, string) isConnected = await _connectionHelper.ConnectionAsync(
             Settings.RemoteLocation,
             Settings.Username,
             Settings.Password);

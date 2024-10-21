@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace NetConnectionService.Models;
+namespace NetConnectionHelper.Models;
 
 public class WinNet
 {

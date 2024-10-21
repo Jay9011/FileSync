@@ -5,11 +5,13 @@ VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "S1FileSync", "S1FileSync\S1FileSync.csproj", "{D6C73C9F-A418-44EF-995C-E02E3BACC2E1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetConnectionService", "NetConnectionService\NetConnectionService.csproj", "{1819DF85-692F-4690-88CD-CD89EAF3DF3C}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileSyncApp.Tests", "FileSyncApp.Tests\FileSyncApp.Tests.csproj", "{A1E1D670-C09A-47CC-BF03-3774C9C0A625}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileIOService", "FileIOService\FileIOService.csproj", "{36974675-38B9-4BED-9A15-18CB4A9FACE1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileIOHelper", "FileIOHelper\FileIOHelper.csproj", "{36974675-38B9-4BED-9A15-18CB4A9FACE1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetConnectionHelper", "NetConnectionHelper\NetConnectionHelper.csproj", "{2A8BE58E-EC07-4135-A6EB-91DC9ACD7DC3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "S1FileSyncService", "S1FileSyncService\S1FileSyncService.csproj", "{87D0A4B7-7FD2-4A4F-B26E-FC455C7C6F7B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,10 +23,6 @@ Global
 		{D6C73C9F-A418-44EF-995C-E02E3BACC2E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D6C73C9F-A418-44EF-995C-E02E3BACC2E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D6C73C9F-A418-44EF-995C-E02E3BACC2E1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1819DF85-692F-4690-88CD-CD89EAF3DF3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1819DF85-692F-4690-88CD-CD89EAF3DF3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1819DF85-692F-4690-88CD-CD89EAF3DF3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1819DF85-692F-4690-88CD-CD89EAF3DF3C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A1E1D670-C09A-47CC-BF03-3774C9C0A625}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A1E1D670-C09A-47CC-BF03-3774C9C0A625}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1E1D670-C09A-47CC-BF03-3774C9C0A625}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -33,6 +31,14 @@ Global
 		{36974675-38B9-4BED-9A15-18CB4A9FACE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{36974675-38B9-4BED-9A15-18CB4A9FACE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{36974675-38B9-4BED-9A15-18CB4A9FACE1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A8BE58E-EC07-4135-A6EB-91DC9ACD7DC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A8BE58E-EC07-4135-A6EB-91DC9ACD7DC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A8BE58E-EC07-4135-A6EB-91DC9ACD7DC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A8BE58E-EC07-4135-A6EB-91DC9ACD7DC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87D0A4B7-7FD2-4A4F-B26E-FC455C7C6F7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87D0A4B7-7FD2-4A4F-B26E-FC455C7C6F7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87D0A4B7-7FD2-4A4F-B26E-FC455C7C6F7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87D0A4B7-7FD2-4A4F-B26E-FC455C7C6F7B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
