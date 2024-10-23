@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NetConnectionHelper;
@@ -21,7 +22,7 @@ namespace FileSyncApp.Tests
         public FileSyncServiceTest()
         {
             _testLocalPath = Path.Combine(Path.GetTempPath(), "TestLocalFolder");
-            _testRemotePath = Path.Combine("\\\\192.168.0.52\\Project\\교육자료\\샘플데이터");
+            _testRemotePath = Path.Combine("\\\\192.168.0.52\\Project\\윤종섭");
             Directory.CreateDirectory(_testLocalPath);
             
             _loggerMock = new Mock<ILogger<FileSyncWorker>>();
@@ -31,11 +32,62 @@ namespace FileSyncApp.Tests
                 LocalLocation = _testLocalPath,
                 RemoteLocation = _testRemotePath,
                 Username = "admin",
-                Password = "secu13579"
+                Password = "secu13579",
+                FolderPattern = "Person_{{yyMMdd}}",
+                FileExtensions = "txt, jpg, png"
             });
             
             _remoteConnectionHelper = new RemoteConnectionSmbHelper();
             _fileSyncService = new FileSyncService(_loggerMock.Object, _settingsServiceMock.Object, _remoteConnectionHelper);
+        }
+        
+        [Fact]
+        public void FolderPattern_ShouldMatchCorrectFormat()
+        {
+            // Arrange
+            var settings = new SyncSettings
+            {
+                FolderPattern = "Person_{{yyMMdd}}"
+            };
+
+            // Act & Assert
+            Assert.True(settings.ShouldSyncFolder("Person_241022"));
+            Assert.False(settings.ShouldSyncFolder("Person_241031")); // Invalid day
+            Assert.False(settings.ShouldSyncFolder("Person_2410")); // Incomplete
+            Assert.False(settings.ShouldSyncFolder("Other_241022")); // Wrong prefix
+        }
+        
+        [Fact]
+        public void FolderPattern_ShouldHandleEscapeCharacters()
+        {
+            // Arrange
+            var settings = new SyncSettings
+            {
+                FolderPattern = @"Person\{{yyMMdd}}" // Explicitly escaped
+            };
+        
+            // Act
+            var evaluated = settings.GetEvaluatedFolderPattern();
+        
+            // Assert
+            Assert.DoesNotContain(@"\{", evaluated);
+            Assert.True(settings.ShouldSyncFolder("Person_241022"));
+        }
+        
+        [Fact]
+        public void GetEvaluatedFolderPattern_ShouldReturnCorrectFormat()
+        {
+            // Arrange
+            var settings = new SyncSettings
+            {
+                FolderPattern = "Person_{{yyMMdd}}"
+            };
+        
+            // Act
+            var pattern = settings.GetEvaluatedFolderPattern();
+        
+            // Assert
+            Assert.Matches(@"Person_\d{6}", pattern);
         }
         
         [Fact]
@@ -76,7 +128,6 @@ namespace FileSyncApp.Tests
         
         public void Dispose()
         {
-            Directory.Delete(_testLocalPath, true);
         }
     }
 }

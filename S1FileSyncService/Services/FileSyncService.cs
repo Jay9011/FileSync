@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using NetConnectionHelper.Helpers;
 using NetConnectionHelper.Interface;
+using S1FileSync.Models;
 using S1FileSync.Services.Interface;
 using S1FileSyncService.Services.Interfaces;
 
@@ -58,11 +59,10 @@ public class FileSyncService : IFileSync
     /// <param name="remotePath">원격 경로</param>
     private async Task SyncDirectory(string localPath, string remotePath)
     {
-        // 로컬 및 원격 디렉토리의 모든 파일 가져오기
-        var localFiles = Directory.GetFiles(localPath, "*.*", SearchOption.AllDirectories)
-            .Select(f => new FileInfo(f));
-        var remoteFiles = Directory.GetFiles(remotePath, "*.*", SearchOption.AllDirectories)
-            .Select(f => new FileInfo(f));
+        var settings = _settingsService.LoadSettings();
+        
+        // 원격 디렉토리의 모든 파일 가져오기
+        var remoteFiles = GetFilteredFiles(remotePath, settings);
         
         // 파일 비교 및 동기화
         var tasks = remoteFiles.Select(async remoteFile =>
@@ -77,6 +77,29 @@ public class FileSyncService : IFileSync
         });
         
         await Task.WhenAll(tasks);
+    }
+
+    /// <summary>
+    /// 필터링 된 파일 가져오기
+    /// </summary>
+    /// <param name="path">경로</param>
+    /// <param name="settings">설정</param>
+    private IEnumerable<FileInfo> GetFilteredFiles(string path, SyncSettings settings)
+    {
+        var directory = new DirectoryInfo(path);
+        var allFiles = new List<FileInfo>();
+
+        foreach (var dir in directory.GetDirectories("*", SearchOption.TopDirectoryOnly))
+        {
+            if (settings.ShouldSyncFolder(dir.Name))
+            {
+                allFiles.AddRange(GetFilteredFiles(dir.FullName, settings));
+            }
+        }
+        
+        allFiles.AddRange(directory.GetFiles().Where(f => settings.ShouldSyncFile(f.Extension)));
+        
+        return allFiles;
     }
 
     /// <summary>
