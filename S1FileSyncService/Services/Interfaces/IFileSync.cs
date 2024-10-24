@@ -6,5 +6,5 @@ public interface IFileSync
     /// 파일 동기화
     /// </summary>
     /// <returns></returns>
-    public Task SyncFile();
+    public Task SyncRemoteFile();
 }

@@ -29,7 +29,7 @@ public class FileSyncService : IFileSync
         #endregion
     }
 
-    public async Task SyncFile()
+    public async Task SyncRemoteFile()
     {
         var settings = _settingsService.LoadSettings();
         string remoteUncPath = _connectionHelper.GetRightPath(settings.RemoteLocation);
@@ -68,15 +68,89 @@ public class FileSyncService : IFileSync
         var tasks = remoteFiles.Select(async remoteFile =>
         {
             string relativeFilePath = GetRelativePath(remotePath, remoteFile.FullName);
-            string localFilePath = Path.Combine(localPath, relativeFilePath);
+            string localFilePath;
 
-            if (!File.Exists(localFilePath) || await IsFileChangedAsync(localFilePath, remoteFile.FullName))
+            if (settings.UseFlatStructure)
             {
-                await CopyFileAsync(remoteFile.FullName, localFilePath);
+                localFilePath = Path.Combine(localPath, remoteFile.Name);
             }
+            else
+            {
+                localFilePath = Path.Combine(localPath, relativeFilePath);
+            }
+
+            await SyncFile(remoteFile.FullName, localFilePath, settings);
         });
         
         await Task.WhenAll(tasks);
+    }
+
+    /// <summary>
+    /// 단일 파일 동기화
+    /// </summary>
+    /// <param name="sourceFilePath">원본 파일 경로</param>
+    /// <param name="destFilePath">목적 파일 경로</param>
+    /// <param name="settings"></param>
+    private async Task SyncFile(string sourceFilePath, string destFilePath, SyncSettings settings)
+    {
+        bool shouldCopy = true;
+
+        if (File.Exists(destFilePath))
+        {
+            switch (settings.DuplicateHandling)
+            {
+                case SyncSettings.DuplicateFileHandling.Skip:
+                    shouldCopy = false;
+                    break;
+                case SyncSettings.DuplicateFileHandling.ReplaceIfDifferent:
+                    shouldCopy = await IsFileChangedAsync(sourceFilePath, destFilePath);
+                    break;
+                case SyncSettings.DuplicateFileHandling.KeepBoth:
+                    destFilePath = GetUniqueFileName(destFilePath);
+                    break;
+                case SyncSettings.DuplicateFileHandling.Replace:
+                default:
+                    break;
+            }
+        }
+
+        if (shouldCopy)
+        {
+            var directory = Path.GetDirectoryName(destFilePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            
+            await CopyFileAsync(sourceFilePath, destFilePath);
+        }
+    }
+
+    /// <summary>
+    /// 중복 파일명 처리
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <returns></returns>
+    private string GetUniqueFileName(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            return filePath;
+        }
+        
+        string directory = Path.GetDirectoryName(filePath) ?? "";
+        string fileName = Path.GetFileNameWithoutExtension(filePath);
+        string extension = Path.GetExtension(filePath);
+        int count = 1;
+        
+        string newFilePath;
+        do
+        {
+            newFilePath = Path.Combine(directory, $"{fileName} ({count}){extension}");
+            count++;
+        } while (File.Exists(newFilePath));
+        
+        return newFilePath;
     }
 
     /// <summary>

@@ -8,52 +8,14 @@
       d:DesignHeight="450" d:DesignWidth="800"
       Title="SettingsView">
 
-    <Page.Resources>
-        <ToolTip x:Key="FolderPatternToolTip" Background="White" Padding="10">
-            <StackPanel>
-                <TextBlock FontWeight="Bold" Text="Folder Pattern Format Guide" Margin="0,0,0,5"/>
-                <TextBlock Text="Use {{format}} in your pattern. For example:"/>
-                <TextBlock Text="• \{{yyyyMMdd}}\ → \20241022\" Margin="10,5,0,0"/>
-                <TextBlock Text="• \{{yyMMddhh}}\ → \24102210\" Margin="10,5,0,0"/>
-                <TextBlock Text="• \TEST_{{yy}}\ → \TEST_24\" Margin="10,5,0,0"/>
-                <TextBlock Text="Available format specifiers:" FontWeight="Bold" Margin="0,10,0,5"/>
-                <Grid Margin="10,0,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="yyyy" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="4-digit year (2024)"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="yy" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="2-digit year (24)"/>
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="MM" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Row="2" Grid.Column="1" Text="Month (01-12)"/>
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="dd" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Row="3" Grid.Column="1" Text="Day (01-31)"/>
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="HH" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Row="4" Grid.Column="1" Text="24-hour format (00-23)"/>
-                    <TextBlock Grid.Row="5" Grid.Column="0" Text="mm" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Row="5" Grid.Column="1" Text="Minutes (00-59)"/>
-                </Grid>
-            </StackPanel>
-        </ToolTip>
-    </Page.Resources>
-    
     <Grid Margin="20">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -74,42 +36,46 @@
         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Settings.LocalLocation}" Margin="5"></TextBox>
 
         <TextBlock Grid.Row="2" Grid.Column="0" Text="Folder Pattern:" VerticalAlignment="Center"></TextBlock>
-        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Settings.FolderPattern}" ToolTip="{StaticResource FolderPatternToolTip}" Margin="5"></TextBox>
-        <!-- <Button Grid.Row="2" Grid.Column="2" Margin="5,5,0,5" Width="24" Height="24" ToolTip="Click for pattern help"> -->
-        <!--     <TextBlock Text="?" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"></TextBlock> -->
-        <!--     <Button.Template> -->
-        <!--         <ControlTemplate TargetType="Button"> -->
-        <!--             <Grid> -->
-        <!--                 <Ellipse Fill="LightGray" Stroke="Gray" StrokeThickness="1"></Ellipse> -->
-        <!--                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"></ContentPresenter> -->
-        <!--             </Grid> -->
-        <!--         </ControlTemplate> -->
-        <!--     </Button.Template> -->
-        <!-- </Button> -->
+        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Settings.FolderPattern}" Margin="5"></TextBox>
         
         <TextBlock Grid.Row="3" Grid.Column="0" Text="File Extensions:" VerticalAlignment="Center"></TextBlock>
         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Settings.FileExtensions}" Margin="5"
                  ToolTip="Enter file extensions separated by commas (e.g., .txt, .doc, .pdf)"></TextBox>
 
-        <TextBlock Grid.Row="4" Grid.Column="0" Text="Sync Interval:" VerticalAlignment="Center"></TextBlock>
-        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding SyncIntervalString}" Margin="5"
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Folder Structure:" VerticalAlignment="Center"></TextBlock>
+        <ComboBox Grid.Row="4" Grid.Column="1" Margin="5"
+                  ItemsSource="{Binding FolderStructureOptions}"
+                  SelectedValuePath="Value"
+                  DisplayMemberPath="DisplayText"
+                  SelectedValue="{Binding Settings.UseFlatStructure}">
+        </ComboBox>
+        
+        <TextBlock Grid.Row="5" Grid.Column="0" Text="Duplicate Handling:" VerticalAlignment="Center"></TextBlock>
+        <ComboBox Grid.Row="5" Grid.Column="1" Margin="5"
+                  ItemsSource="{Binding DuplicateHandlingOptions}"
+                    SelectedValuePath="Value"
+                    DisplayMemberPath="DisplayText"
+                  SelectedValue="{Binding Settings.DuplicateHandling}">
+        </ComboBox>
+        
+        <TextBlock Grid.Row="6" Grid.Column="0" Text="Sync Interval:" VerticalAlignment="Center"></TextBlock>
+        <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding SyncIntervalString}" Margin="5"
                  ToolTip="Enter time interval in format: [dd.]HH:mm:ss"></TextBox>
 
-        <TextBlock Grid.Row="5" Grid.Column="0" Text="Username:" VerticalAlignment="Center"></TextBlock>
-        <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Settings.Username}" Margin="5"></TextBox>
+        <TextBlock Grid.Row="7" Grid.Column="0" Text="Username:" VerticalAlignment="Center"></TextBlock>
+        <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding Settings.Username}" Margin="5"></TextBox>
 
-        <TextBlock Grid.Row="6" Grid.Column="0" Text="Password:" VerticalAlignment="Center"></TextBlock>
-        <PasswordBox Grid.Row="6" Grid.Column="1" x:Name="PasswordBox" Margin="5"></PasswordBox>
+        <TextBlock Grid.Row="8" Grid.Column="0" Text="Password:" VerticalAlignment="Center"></TextBlock>
+        <PasswordBox Grid.Row="8" Grid.Column="1" x:Name="PasswordBox" Margin="5"></PasswordBox>
 
-        <Button Grid.Row="7" Grid.Column="1" Content="Save Settings" Command="{Binding SaveSettingsCommand}" Margin="5"></Button>
+        <Button Grid.Row="9" Grid.Column="1" Content="Save Settings" Command="{Binding SaveSettingsCommand}" Margin="5"></Button>
         
-        <Button Grid.Row="8" Grid.Column="1" Content="Sync Settings" Command="{Binding SyncSettingsCommand}" Margin="5"></Button>
+        <Button Grid.Row="10" Grid.Column="1" Content="Sync Settings" Command="{Binding SyncSettingsCommand}" Margin="5"></Button>
 
-        <Button Grid.Row="9" Grid.Column="1" Content="Test Connection" Command="{Binding TestConnectionCommand}" Margin="5"></Button>
-        <TextBlock Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="2"
+        <Button Grid.Row="11" Grid.Column="1" Content="Test Connection" Command="{Binding TestConnectionCommand}" Margin="5"></Button>
+        <TextBlock Grid.Row="12" Grid.Column="1"
                    Text="{Binding ConnectionStatus}"
                    FontWeight="Bold"
                    Margin="5"></TextBlock>
-
     </Grid>
 </Page>

@@ -1,12 +1,18 @@
 ﻿using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Windows;
 using S1FileSync.Helpers;
 
 namespace S1FileSync.Models;
 
 public class SyncSettings
 {
+    /// <summary>
+    /// 패턴 정규식
+    /// </summary>
+    private static readonly Regex PatternRegex = new(@"\{\{(.+?)\}\}");
+    
     /// <summary>
     /// 원격지 주소
     /// </summary>
@@ -24,7 +30,7 @@ public class SyncSettings
     /// </summary>
     public string LocalLocation { get; set; }
 
-    #region 폴더 패턴 관련(FolderPattern)
+    #region 폴더 패턴 (FolderPattern)
 
     /// <summary>
     /// 폴더 패턴 저장용
@@ -37,33 +43,17 @@ public class SyncSettings
         {
             if (value?.Contains('\\') == true)
             {
-                // 이스케이프 문자 제거 시도
                 value = value.Replace("\\{", "{").Replace("\\}", "}");
             }
         
             _folderPattern = value;
-            UpdateFolderPatternRegex();
+            ValidateFolderPattern();
         }
     }
     
-    /// <summary>
-    /// 컴파일 된 폴더 패턴 정규식
-    /// </summary>
-    private Regex? _folderPatternRegex;
-    
-    /// <summary>
-    /// 마지막 패턴 평가 시점
-    /// </summary>
-    private DateTime _lastPatternEvaluation = DateTime.Now;
-
-    /// <summary>
-    /// 현재 평가된 폴더 패턴
-    /// </summary>
-    private string _evaluatedFolderPattern;
-
     #endregion
 
-    #region 확장자 관련 (FileExtensions)
+    #region 확장자 (FileExtensions)
 
     /// <summary>
     /// 확장자 저장용
@@ -87,7 +77,7 @@ public class SyncSettings
 
     #endregion
 
-    #region 동기화 관련 (SyncInterval)
+    #region 동기화 주기 (SyncInterval)
 
     /// <summary>
     /// 동기화 주기
@@ -109,6 +99,40 @@ public class SyncSettings
         }
     }
     public TimeSpan SyncIntervalTimeSpan => TimeSpanHelper.ParseTimeSpan(SyncInterval);
+
+    #endregion
+
+    /// <summary>
+    /// 평면구조 동기화 여부
+    /// </summary>
+    public bool UseFlatStructure { get; set; } = false;
+
+    #region 중복 파일 처리 방식
+
+    public enum DuplicateFileHandling
+    {
+        /// <summary>
+        /// 다른 경우만 덮어쓰기
+        /// </summary>
+        ReplaceIfDifferent,
+        /// <summary>
+        /// 중복 파일 덮어쓰기
+        /// </summary>
+        Replace,
+        /// <summary>
+        /// 중복 파일 건너뛰기
+        /// </summary>
+        Skip,
+        /// <summary>
+        /// 둘 다 유지 (파일명 변경)
+        /// </summary>
+        KeepBoth
+    }
+
+    /// <summary>
+    /// 중복 파일 처리 방식
+    /// </summary>
+    public DuplicateFileHandling DuplicateHandling { get; set; } = DuplicateFileHandling.ReplaceIfDifferent;
 
     #endregion
     
@@ -153,22 +177,6 @@ public class SyncSettings
             return (false, "Password is required");
         }
 
-        if (!string.IsNullOrWhiteSpace(FolderPattern))
-        {
-            try
-            {
-                var testPattern = GetEvaluatedFolderPattern();
-                if (string.IsNullOrEmpty(testPattern))
-                {
-                    return (false, "Invalid folder pattern");
-                }
-            }
-            catch (Exception e)
-            {
-                return (false, $"Invalid folder pattern: {e.Message}");
-            }
-        }
-
         if (string.IsNullOrWhiteSpace(FileExtensions))
         {
             var invalidExtensions = FileExtensions
@@ -210,29 +218,27 @@ public class SyncSettings
     /// 현재 시간에 맞춰 평가된 폴더 패턴 반환
     /// </summary>
     /// <returns></returns>
-    public string GetEvaluatedFolderPattern()
+    public string GetExpectedFolderName()
     {
-        var now = DateTime.Now;
-        
-        // 1분에 한 번만 패턴 재평가
-        if ((now - _lastPatternEvaluation).TotalMinutes < 1 && !string.IsNullOrEmpty(_evaluatedFolderPattern))
-        {
-            return _evaluatedFolderPattern;
-        }
-
         if (string.IsNullOrWhiteSpace(_folderPattern))
         {
             return string.Empty;
         }
         
-        _evaluatedFolderPattern = Regex.Replace(_folderPattern, @"\{\{(.+?)\}\}", match =>
-        {
-            string format = match.Groups[1].Value;
-            return now.ToString(format);
-        });
+        var today = DateTime.Now;
+        var result = _folderPattern;
+        var matches = PatternRegex.Matches(result);
         
-        _lastPatternEvaluation = now;
-        return _evaluatedFolderPattern;
+        // 끝에서부터 처리
+        for (int i = matches.Count - 1; i >= 0; i--)
+        {
+            var match = matches[i];
+            string format = match.Groups[1].Value;
+            result = result.Remove(match.Index, match.Length)
+                .Insert(match.Index, today.ToString(format));
+        }
+
+        return result;
     }
     
     /// <summary>
@@ -243,54 +249,43 @@ public class SyncSettings
     public bool ShouldSyncFolder(string folderPath)
     {
         // 패턴이 없으면 모든 폴더 동기화
-        if (_folderPatternRegex == null)
+        if (string.IsNullOrWhiteSpace(_folderPattern))
         {
             return true;
         }
 
         string folderName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar));
-        return _folderPatternRegex.IsMatch(folderName);
+        string expectedFolderName = GetExpectedFolderName();
+        
+        return string.Equals(folderName, expectedFolderName, StringComparison.OrdinalIgnoreCase);
     }
     
     /// <summary>
-    /// 폴더 패턴 정규식 업데이트
+    /// 텍스트 내 패턴 카운트 반환
     /// </summary>
-    private void UpdateFolderPatternRegex()
+    /// <param name="text"></param>
+    /// <returns></returns>
+    public int GetPatternCount(string text)
     {
-        if (string.IsNullOrWhiteSpace(_folderPattern))
+        return PatternRegex.Matches(text).Count;
+    }
+    
+    /// <summary>
+    /// 텍스트 내 패턴 포맷 반환
+    /// </summary>
+    /// <param name="text"></param>
+    /// <returns></returns>
+    public IEnumerable<string> GetPatternFormats(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
         {
-            _folderPatternRegex = null;
-            return;
+            yield break;
         }
-
-        try
+        
+        var matches = PatternRegex.Matches(text);
+        foreach (Match match in matches)
         {
-            // 이중 중괄호 사이의 날짜 포맷을 숫자 패턴으로 변환
-            int startIndex = _folderPattern.IndexOf("{{", StringComparison.Ordinal);
-            int endIndex = _folderPattern.IndexOf("}}", StringComparison.Ordinal);
-        
-            if (startIndex == -1 || endIndex == -1)
-            {
-                // 날짜 패턴이 없는 경우 문자열 그대로 매칭
-                _folderPatternRegex = new Regex($"^{Regex.Escape(_folderPattern)}$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                return;
-            }
-            string dateFormat = _folderPattern.Substring(startIndex + 2, endIndex - startIndex - 2);
-        
-            string prefix = Regex.Escape(_folderPattern.Substring(0, startIndex));
-            string suffix = Regex.Escape(_folderPattern.Substring(endIndex + 2));
-        
-            string datePattern = GetDateTimeRegexPattern(dateFormat);
-        
-            // 최종 패턴 조합
-            string pattern = $"^{prefix}{datePattern}{suffix}$";
-        
-            _folderPatternRegex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            _evaluatedFolderPattern = pattern;
-        }
-        catch (Exception e)
-        {
-            _folderPatternRegex = null;
+            yield return match.Groups[1].Value;
         }
     }
     
@@ -334,34 +329,60 @@ public class SyncSettings
     }
 
     /// <summary>
-    /// 날짜/시간 포멧을 정규식 패턴으로 변환
+    /// 폴더 패턴 유효성 검사
     /// </summary>
-    /// <param name="format">yyyyMMddHHmmss 형식의 날짜/시간 포멧</param>
-    /// <returns>정규식 패턴</returns>
-    private string GetDateTimeRegexPattern(string format)
+    /// <exception cref="ArgumentException"></exception>
+    private void ValidateFolderPattern()
     {
-        var pattern = format
-            .Replace("yyyy", @"\d{4}")
-            .Replace("yy", @"\d{2}")
-            .Replace("MM", @"\d{2}")
-            .Replace("dd", @"\d{2}")
-            .Replace("HH", @"\d{2}")
-            .Replace("hh", @"\d{2}")
-            .Replace("mm", @"\d{2}")
-            .Replace("ss", @"\d{2}");
-    
-        return pattern;
+        if (string.IsNullOrWhiteSpace(FolderPattern))
+        {
+            return;
+        }
+
+        try
+        {
+            var testDate = new DateTime(2024, 1, 1);
+            var matches = PatternRegex.Matches(FolderPattern);
+
+            if (matches.Count == 0 && !string.IsNullOrWhiteSpace(_folderPattern))
+            {
+                return;
+            }
+
+            foreach (Match match in matches)
+            {
+                string format = match.Groups[1].Value;
+                try
+                {
+                    testDate.ToString(format);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Invalid folder pattern: {e.Message}");
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            throw new ArgumentException($"Invalid folder pattern: {e.Message}");
+        }
     }
+    
 }
 
 public static class ConstSettings
 {
     public const string Settings = "Settings";
-    public const string RemoteLocation = "RemoteLocation";
+    
     public const string Username = "Username";
     public const string Password = "Password";
+    public const string RemoteLocation = "RemoteLocation";
     public const string LocalLocation = "LocalLocation";
+    public const string FolderPattern = "FolderPattern";
     public const string FileExtensions = "FileExtensions";
     public const string SyncInterval = "SyncInterval";
+    public const string UseFlatStructure = "UseFlatStructure";
+    public const string DuplicateHandling = "DuplicateHandling";
+    
     public const string DefaultSyncInterval = "1.00:00:00";
 }

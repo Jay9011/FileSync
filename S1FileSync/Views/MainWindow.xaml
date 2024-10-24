@@ -6,7 +6,11 @@
         xmlns:local="clr-namespace:S1FileSync"
         xmlns:views="clr-namespace:S1FileSync.Views"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow"
+        Width="800" Height="550"
+        MaxHeight="{x:Static SystemParameters.MaximizedPrimaryScreenHeight}"
+        MaxWidth="{x:Static SystemParameters.MaximizedPrimaryScreenWidth}"
+        >
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

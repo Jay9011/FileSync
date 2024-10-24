@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using FileIOHelper;
 using NetConnectionHelper.Interface;
@@ -54,6 +55,27 @@ public class SettingsViewModel : ViewModelBase
     public ICommand SaveSettingsCommand { get; set; }
     public ICommand TestConnectionCommand { get; set; }
     public ICommand SyncSettingsCommand { get; set; }
+    public ICommand TestSyncCommand { get; set; }
+
+    public class ComboOption
+    {
+        public string DisplayText { get; set; }
+        public object Value { get; set; }
+    }
+    
+    public IEnumerable<ComboOption> FolderStructureOptions => new[]
+    {
+        new ComboOption { DisplayText = "Keep original folder structure", Value = false },
+        new ComboOption { DisplayText = "Save all files in one folder", Value = true }
+    };
+    
+    public IEnumerable<ComboOption> DuplicateHandlingOptions => new[]
+    {
+        new ComboOption { DisplayText = "Replace if different", Value = Models.SyncSettings.DuplicateFileHandling.ReplaceIfDifferent },
+        new ComboOption { DisplayText = "Always replace", Value = Models.SyncSettings.DuplicateFileHandling.Replace },
+        new ComboOption { DisplayText = "Skip", Value = Models.SyncSettings.DuplicateFileHandling.Skip },
+        new ComboOption { DisplayText = "Keep both (rename)", Value = Models.SyncSettings.DuplicateFileHandling.KeepBoth }
+    };
 
     public SettingsViewModel(IRemoteConnectionHelper connectionHelper, IPopupService popupService, ISettingsService settingsService)
     {
@@ -77,6 +99,12 @@ public class SettingsViewModel : ViewModelBase
     /// </summary>
     private void SaveSettings()
     {
+        if (string.IsNullOrEmpty(Settings.Password))
+        {
+            var existingSettings = _settingsService.LoadSettings();
+            Settings.Password = existingSettings.Password;
+        }
+        
         _settingsService.SaveSettings(Settings);
     }
     
@@ -94,8 +122,14 @@ public class SettingsViewModel : ViewModelBase
     /// </summary>
     private void SyncSettings()
     {
+        var currentPassword = Settings.Password;
         _settingsService.SyncSettings();
         LoadSettings();
+        
+        if (string.IsNullOrEmpty(Settings.Password))
+        {
+            Settings.Password = currentPassword;
+        }
     }
     
     /// <summary>

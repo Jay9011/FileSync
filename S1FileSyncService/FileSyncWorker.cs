@@ -60,7 +60,7 @@ namespace S1FileSyncService
         {
             try
             {
-                await _fileSync.SyncFile();
+                await _fileSync.SyncRemoteFile();
                 _logger.LogInformation("File sync completed at: {time}", DateTimeOffset.Now);
             }
             catch (Exception e)

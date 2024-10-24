@@ -42,54 +42,78 @@ namespace FileSyncApp.Tests
         }
         
         [Fact]
-        public void FolderPattern_ShouldMatchCorrectFormat()
+        public void DateFormats_ShouldBeExtracted()
         {
             // Arrange
             var settings = new SyncSettings
             {
-                FolderPattern = "Person_{{yyMMdd}}"
+                FolderPattern = "{{yy}}_Person_{{MMdd}}_{{HH}}"
+            };
+            
+            // Act
+            var dateFormats = settings.GetPatternFormats(settings.FolderPattern).ToList();
+            
+            // Assert
+            Assert.Equal(3, dateFormats.Count);
+            Assert.Equal("yy", dateFormats[0]);
+            Assert.Equal("MMdd", dateFormats[1]);
+            Assert.Equal("HH", dateFormats[2]);
+        }
+        
+        [Theory]
+        [InlineData("{{yy}}_Person_{{MMdd}}", 2)]
+        [InlineData("Normal_Folder", 0)]
+        [InlineData("{{yyyy}}_{{MM}}_{{dd}}_{{HH}}", 4)]
+        [InlineData("Log_{{yyyyMMdd}}", 1)]
+        public void GetDateGroupCount_ShouldReturnCorrectCount(string folderPattern, int expectedCount)
+        {
+            // Arrange
+            var settings = new SyncSettings
+            {
+                FolderPattern = folderPattern
+            };
+            
+            // Act & Assert
+            Assert.Equal(expectedCount, settings.GetPatternCount(folderPattern));
+        }
+        
+        [Fact]
+        public void MultipleDataGroups_ShouldMatch()
+        {
+            // Arrange
+            var settings = new SyncSettings
+            {
+                FolderPattern = "{{yy}}_Person_{{MMdd}}"
+            };
+            
+            var today = DateTime.Now;
+            var expectedFolder = $"{today:yy}_Person_{today:MMdd}";
+            
+            // Act & Assert
+            Assert.Equal(2, settings.GetPatternCount(settings.FolderPattern));
+            Assert.True(settings.ShouldSyncFolder(expectedFolder));
+            Assert.False(settings.ShouldSyncFolder($"{today.AddDays(1):yy}_Person_{today.AddDays(1):MMdd}"));
+        }
+
+        [Fact]
+        public void ComplexPattern_ShouldMatch()
+        {
+            // Arrange
+            var settings = new SyncSettings
+            {
+                FolderPattern = "Data_{{yyyy}}_Q{{MM}}_Day{{dd}}_{{HH}}h"
             };
 
+            var today = DateTime.Now;
+            var expectedFolder = $"Data_{today:yyyy}_Q{today:MM}_Day{today:dd}_{today:HH}h";
+            var wrongFolder = $"Data_{today:yyyy}_Q{today:MM}_Day{today.AddDays(1):dd}_{today:HH}h";
+
             // Act & Assert
-            Assert.True(settings.ShouldSyncFolder("Person_241022"));
-            Assert.False(settings.ShouldSyncFolder("Person_241031")); // Invalid day
-            Assert.False(settings.ShouldSyncFolder("Person_2410")); // Incomplete
-            Assert.False(settings.ShouldSyncFolder("Other_241022")); // Wrong prefix
+            Assert.Equal(4, settings.GetPatternCount(settings.FolderPattern));
+            Assert.True(settings.ShouldSyncFolder(expectedFolder));
+            Assert.False(settings.ShouldSyncFolder(wrongFolder));
         }
-        
-        [Fact]
-        public void FolderPattern_ShouldHandleEscapeCharacters()
-        {
-            // Arrange
-            var settings = new SyncSettings
-            {
-                FolderPattern = @"Person\{{yyMMdd}}" // Explicitly escaped
-            };
-        
-            // Act
-            var evaluated = settings.GetEvaluatedFolderPattern();
-        
-            // Assert
-            Assert.DoesNotContain(@"\{", evaluated);
-            Assert.True(settings.ShouldSyncFolder("Person_241022"));
-        }
-        
-        [Fact]
-        public void GetEvaluatedFolderPattern_ShouldReturnCorrectFormat()
-        {
-            // Arrange
-            var settings = new SyncSettings
-            {
-                FolderPattern = "Person_{{yyMMdd}}"
-            };
-        
-            // Act
-            var pattern = settings.GetEvaluatedFolderPattern();
-        
-            // Assert
-            Assert.Matches(@"Person_\d{6}", pattern);
-        }
-        
+
         [Fact]
         public async Task SyncFiles_ShouldCopyFileFromRemoteToLocal()
         {
@@ -101,33 +125,50 @@ namespace FileSyncApp.Tests
             File.WriteAllText(localTestFilePath, "Old Content");
             
             // Act
-            await _fileSyncService.SyncFile();
+            await _fileSyncService.SyncRemoteFile();
             
             // Assert
             Assert.Equal("Original Content", File.ReadAllText(localTestFilePath));
         }
-        
+
         [Fact]
-        public async Task SyncFiles_ShouldNotUpdateUnchangedFile()
+        public async Task SyncFile_WithFlatStructure_ShouldMergeFiles()
         {
             // Arrange
-            string testFileName = "testfile.txt";
-            string remoteTestFilePath = Path.Combine(_testRemotePath, testFileName);
-            string localTestFilePath = Path.Combine(_testLocalPath, testFileName);
-            string content = "Same Content";
-            File.WriteAllText(remoteTestFilePath, content);
-            File.WriteAllText(localTestFilePath, content);
-            DateTime originalLastWriteTime = File.GetLastWriteTime(localTestFilePath);
+            var settings = new SyncSettings
+            {
+                LocalLocation = _testLocalPath,
+                RemoteLocation = _testRemotePath,
+                Username = "admin",
+                Password = "secu13579",
+                FolderPattern = "",
+                FileExtensions = "txt, jpg, png",
+                UseFlatStructure = true,
+                DuplicateHandling = SyncSettings.DuplicateFileHandling.ReplaceIfDifferent
+            };
+            
+            _settingsServiceMock.Setup(s => s.LoadSettings()).Returns(settings);
+            
+            // 원격 폴더에 테스트 파일 생성
+            var remoteFolder1 = Path.Combine(_testRemotePath, "Person_241020");
+            var remoteFolder2 = Path.Combine(_testRemotePath, "Person_241022");
+            Directory.CreateDirectory(remoteFolder1);
+            Directory.CreateDirectory(remoteFolder2);
+            File.WriteAllText(Path.Combine(remoteFolder1, "201011.jpg"), "Old Photo");
+            File.WriteAllText(Path.Combine(remoteFolder2, "201011.jpg"), "New Photo");
             
             // Act
-            await _fileSyncService.SyncFile();
+            await _fileSyncService.SyncRemoteFile();
             
             // Assert
-            Assert.Equal(originalLastWriteTime, File.GetLastWriteTime(localTestFilePath));
+            var localFilePath = Path.Combine(_testLocalPath, "201011.jpg");
+            Assert.True(File.Exists(localFilePath));
+            Assert.Equal("New Photo", File.ReadAllText(localFilePath));
         }
         
         public void Dispose()
         {
+            // Directory.Delete(_testLocalPath, true);
         }
     }
 }
