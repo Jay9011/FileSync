@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" InitialTargets="EnsureWixToolsetInstalled" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>3.10</ProductVersion>
+    <ProjectGuid>da1e6131-892b-49ea-bdf9-beb2fafe058a</ProjectGuid>
+    <SchemaVersion>2.0</SchemaVersion>
+    <OutputName>SetupProject</OutputName>
+    <OutputType>Package</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
+    <DefineConstants>Debug</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DefineConstants>
+      $(DefineConstants);
+      ServiceConfigFolder=Config;
+      MainAppSourceDir=..\S1FileSync\bin\Release\net8.0-windows;
+      ServiceSourceDir=..\S1FileSyncService\bin\Release\net8.0-windows
+    </DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="CommonFiles.wxs" />
+    <Compile Include="Product.wxs" />
+    <Compile Include="GeneratedFiles\MainAppFiles.wxs" />
+    <Compile Include="GeneratedFiles\ServiceFiles.wxs" />
+  </ItemGroup>
+  <ItemGroup>
+    <WixExtension Include="WixUtilExtension">
+      <HintPath>$(WixExtDir)\WixUtilExtension.dll</HintPath>
+      <Name>WixUtilExtension</Name>
+    </WixExtension>
+    <WixExtension Include="WixUIExtension">
+      <HintPath>$(WixExtDir)\WixUIExtension.dll</HintPath>
+      <Name>WixUIExtension</Name>
+    </WixExtension>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FileIOHelper\FileIOHelper.csproj">
+      <Name>FileIOHelper</Name>
+      <Project>{36974675-38b9-4bed-9a15-18cb4a9face1}</Project>
+      <Private>True</Private>
+      <DoNotHarvest>True</DoNotHarvest>
+      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
+      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
+    </ProjectReference>
+    <ProjectReference Include="..\NetConnectionHelper\NetConnectionHelper.csproj">
+      <Name>NetConnectionHelper</Name>
+      <Project>{2a8be58e-ec07-4135-a6eb-91dc9acd7dc3}</Project>
+      <Private>True</Private>
+      <DoNotHarvest>True</DoNotHarvest>
+      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
+      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
+    </ProjectReference>
+    <ProjectReference Include="..\S1FileSyncService\S1FileSyncService.csproj">
+      <Name>S1FileSyncService</Name>
+      <Project>{87d0a4b7-7fd2-4a4f-b26e-fc455c7c6f7b}</Project>
+      <Private>True</Private>
+      <DoNotHarvest>True</DoNotHarvest>
+      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
+      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
+    </ProjectReference>
+    <ProjectReference Include="..\S1FileSync\S1FileSync.csproj">
+      <Name>S1FileSync</Name>
+      <Project>{d6c73c9f-a418-44ef-995c-e02e3bacc2e1}</Project>
+      <Private>True</Private>
+      <DoNotHarvest>True</DoNotHarvest>
+      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
+      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Config" />
+    <Folder Include="GeneratedFiles\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Config\ServiceInfo.ini" />
+  </ItemGroup>
+  <Import Project="$(WixTargetsPath)" Condition=" '$(WixTargetsPath)' != '' " />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets" Condition=" '$(WixTargetsPath)' == '' AND Exists('$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets') " />
+  <Target Name="EnsureWixToolsetInstalled" Condition=" '$(WixTargetsImported)' != 'true' ">
+    <Error Text="The WiX Toolset v3.11 build tools must be installed to build this project. To download the WiX Toolset, see https://wixtoolset.org/releases/v3.11/stable" />
+  </Target>
+  <PropertyGroup>
+    <PreBuildEvent>"C:\Program Files (x86)\WiX Toolset v3.11\bin\heat.exe" dir "..\..\..\S1FileSync\bin\Release\publish" -cg HeatGenerated_MainAppComponents -gg -scom -sreg -sfrag -srd -out "..\..\GeneratedFiles\MainAppFiles.wxs"
+"C:\Program Files (x86)\WiX Toolset v3.11\bin\heat.exe" dir "..\..\..\S1FileSyncService\bin\Release\publish" -cg HeatGenerated_ServiceComponents -gg -scom -sreg -sfrag -srd -out "..\..\GeneratedFiles\ServiceFiles.wxs"</PreBuildEvent>
+  </PropertyGroup>
+  <!--
+	To modify your build process, add your task inside one of the targets below and uncomment it.
+	Other similar extension points exist, see Wix.targets.
+	<Target Name="BeforeBuild">
+	</Target>
+	<Target Name="AfterBuild">
+	</Target>
+	-->
+</Project>

@@ -1,0 +1,2 @@
+sc create S1FileSyncService binPath= "D:\Projects\0. Customize Module\FileSync\S1FileSyncService\bin\Release\net8.0-windows\S1FileSyncService.exe" start= auto
+sc description S1FileSyncService "File synchronization service"

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+	<Product Id="{7800F3F4-7F04-4AA8-9574-2A4B5F2803AF}" Name="S1FileSync" Language="1033" Codepage="65001" Version="1.0.0.0" Manufacturer="Jay9011" UpgradeCode="6ed4c294-9800-4c99-85a3-cb6f1a9f8d99">
+		<Package Id="*" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated" 
+		         Keywords="Installer,MSI" Description="S1FileSync - File Synchronization Program" Comments="File Synchronization Program and Service"/>
+
+		<MajorUpgrade Schedule="afterInstallInitialize"
+		              DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+		              AllowSameVersionUpgrades="yes"/>
+
+		<MediaTemplate EmbedCab="yes"/>
+
+		<Icon Id="app.ico" SourceFile="$(var.S1FileSync.ProjectDir)Assets\app.ico"/>
+		<Property Id="ARPPRODUCTICON" Value="app.ico" />
+		<Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
+		<Property Id="ARPCONTACT" Value="Jay9011" />
+		<Property Id="ARPCOMMENTS" Value="File Synchronization Program and Service" />
+
+		<Condition Message="Administrator privileges are required.">
+			Privileged
+		</Condition>
+
+		<Feature Id="Complete" Title="S1FileSync" Level="1"
+		         Description="File synchronization program with background service"
+		         Display="expand" ConfigurableDirectory="INSTALLFOLDER">
+
+			<ComponentGroupRef Id="CommonComponents"/>
+
+			<Feature Id="MainApplication" Title="S1FileSync Application" Level="1">
+				<!-- 수동으로 정의한 컴포넌트 참조 -->
+				<ComponentRef Id="MainExecutable" />
+				<ComponentRef Id="ServiceInfoFile" />
+				<ComponentRef Id="ApplicationShortcut" />
+				<!-- Heat로 생성된 컴포넌트 그룹 참조 -->
+				<ComponentGroupRef Id="HeatGenerated_MainAppComponents" />
+			</Feature>
+			<Feature Id="ServiceApplication" Title="S1FileSync Service" Level="1">
+				<!-- 수동으로 정의한 컴포넌트 참조 -->
+				<ComponentRef Id="ServiceExecutable" />
+				<ComponentRef Id="ServiceConfig" />
+				<!-- Heat로 생성된 컴포넌트 그룹 참조 -->
+				<ComponentGroupRef Id="HeatGenerated_ServiceComponents" />
+			</Feature>
+		</Feature>
+
+		<UI>
+			<UIRef Id="WixUI_InstallDir" />
+			<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+		</UI>
+	</Product>
+	<!-- 디렉토리 구조 -->
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+				<Directory Id="INSTALLFOLDER" Name="S1FileSync">
+					<Directory Id="MainAppFolder" Name="App" />
+					<Directory Id="ServiceFolder" Name="Service" />
+				</Directory>
+			</Directory>
+			<Directory Id="ProgramMenuFolder">
+				<Directory Id="ApplicationProgramsFolder" Name="S1FileSync"/>
+			</Directory>
+		</Directory>
+	</Fragment>
+	<!-- 메인 응용프로그램 핵심 컴포넌트 -->
+	<Fragment>
+		<!-- 메인 실행 파일 -->
+		<Component Id="MainExecutable" Directory="MainAppFolder" Guid="*">
+			<File Id="MainEXE"
+			      Name="S1FileSync.exe"
+			      Source="$(var.MainAppSourceDir)\S1FileSync.exe"
+			      KeyPath="yes" />
+		</Component>
+
+		<!-- 서비스 정보 파일 -->
+		<Component Id="ServiceInfoFile" Directory="MainAppFolder" Guid="*">
+			<File Id="ServiceInfoINI"
+			      Name="ServiceInfo.ini"
+			      Source="$(var.ServiceConfigFolder)\ServiceInfo.ini"
+			      KeyPath="yes" />
+		</Component>
+
+		<!-- 시작 메뉴 바로가기 -->
+		<Component Id="ApplicationShortcut" Directory="ApplicationProgramsFolder" Guid="*">
+			<Shortcut Id="ApplicationStartMenuShortcut"
+			          Name="S1FileSync"
+			          Description="File Synchronization Program"
+			          Target="[MainAppFolder]S1FileSync.exe"
+			          WorkingDirectory="MainAppFolder"
+			          Icon="app.ico"/>
+			<RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall"/>
+			<RegistryValue Root="HKCU" Key="Software\S1FileSync" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+		</Component>
+	</Fragment>
+
+	<!-- 서비스 핵심 컴포넌트 -->
+	<Fragment>
+		<!-- 서비스 실행 파일 -->
+		<Component Id="ServiceExecutable" Directory="ServiceFolder" Guid="*">
+			<File Id="ServiceEXE"
+			      Name="S1FileSyncService.exe"
+			      Source="$(var.ServiceSourceDir)\S1FileSyncService.exe"
+			      KeyPath="yes" />
+
+			<ServiceInstall Id="ServiceInstaller"
+			                Type="ownProcess"
+			                Name="S1FileSyncService"
+			                DisplayName="S1 File Sync Service"
+			                Description="File synchronization service"
+			                Start="demand"
+			                ErrorControl="normal" />
+
+			<ServiceControl Id="StartService"
+			                Stop="both"
+			                Remove="uninstall"
+			                Name="S1FileSyncService"
+			                Wait="yes" />
+		</Component>
+
+		<!-- 서비스 설정 파일 -->
+		<Component Id="ServiceConfig" Directory="ServiceFolder" Guid="*">
+			<File Id="AppSettings"
+			      Name="appsettings.json"
+			      Source="$(var.ServiceSourceDir)\appsettings.json"
+			      KeyPath="yes" />
+		</Component>
+	</Fragment>
+</Wix>

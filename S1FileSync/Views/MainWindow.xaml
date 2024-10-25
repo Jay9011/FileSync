@@ -10,6 +10,7 @@
         Width="800" Height="550"
         MaxHeight="{x:Static SystemParameters.MaximizedPrimaryScreenHeight}"
         MaxWidth="{x:Static SystemParameters.MaximizedPrimaryScreenWidth}"
+        Icon="/Assets/app.ico"
         >
     <Grid>
         <Grid.RowDefinitions>

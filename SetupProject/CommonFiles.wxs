@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+		<ComponentGroup Id="CommonComponents">
+			<!-- 공통 DLL들을 정의 -->
+			<Component Id="FileIOHelper" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="FileIOHelper.dll" Source="$(var.MainAppSourceDir)\FileIOHelper.dll" KeyPath="yes"/>
+			</Component>
+			<Component Id="NetConnectionHelper" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="NetConnectionHelper.dll" Source="$(var.MainAppSourceDir)\NetConnectionHelper.dll" KeyPath="yes"/>
+			</Component>
+			<!-- Microsoft.Extensions DLL들 -->
+			<Component Id="MicrosoftExtensionsConfiguration" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="Microsoft.Extensions.Configuration.dll"
+				      Source="$(var.MainAppSourceDir)\Microsoft.Extensions.Configuration.dll"
+				      KeyPath="yes"/>
+			</Component>
+		</ComponentGroup>
+	</Fragment>
+</Wix>
