@@ -32,6 +32,9 @@ namespace S1FileSyncService
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _settings = _settingsService.LoadSettings();
+
+            _logger.LogInformation($"Settings File Path:{_settingsService.GetSettingsFilePath()}");
+
             StartSyncTimer();
             
             while (!stoppingToken.IsCancellationRequested)

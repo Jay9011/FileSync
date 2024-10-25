@@ -12,7 +12,12 @@ public class SettingsService : ISettingsService
     {
         _iniFileHelper = iniFileHelper;
     }
-    
+
+    public string GetSettingsFilePath()
+    {
+        return _iniFileHelper.GetFilePath();
+    }
+
     public SyncSettings LoadSettings()
     {
         if (_iniFileHelper is IFileIOHelper fileIoHelper)

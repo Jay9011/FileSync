@@ -17,20 +17,11 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
-  </PropertyGroup>
-  <PropertyGroup>
-    <DefineConstants>
-      $(DefineConstants);
-      ServiceConfigFolder=Config;
-      MainAppSourceDir=..\S1FileSync\bin\Release\net8.0-windows;
-      ServiceSourceDir=..\S1FileSyncService\bin\Release\net8.0-windows
-    </DefineConstants>
+    <DefineConstants>$(DefineConstants);ServiceConfigFolder=Config;CombinedSourceDir=$(SolutionDir)SetupProject\Combined;</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="CommonFiles.wxs" />
+    <Compile Include="GeneratedFiles\CombinedFiles.wxs" />
     <Compile Include="Product.wxs" />
-    <Compile Include="GeneratedFiles\MainAppFiles.wxs" />
-    <Compile Include="GeneratedFiles\ServiceFiles.wxs" />
   </ItemGroup>
   <ItemGroup>
     <WixExtension Include="WixUtilExtension">
@@ -78,10 +69,12 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Config" />
-    <Folder Include="GeneratedFiles\" />
+    <Folder Include="GeneratedFiles" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Config\ServiceInfo.ini" />
+    <Content Include="Config\settings.ini" />
+    <Content Include="GenerateCommonFolder.ps1" />
   </ItemGroup>
   <Import Project="$(WixTargetsPath)" Condition=" '$(WixTargetsPath)' != '' " />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets" Condition=" '$(WixTargetsPath)' == '' AND Exists('$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets') " />
@@ -89,8 +82,7 @@
     <Error Text="The WiX Toolset v3.11 build tools must be installed to build this project. To download the WiX Toolset, see https://wixtoolset.org/releases/v3.11/stable" />
   </Target>
   <PropertyGroup>
-    <PreBuildEvent>"C:\Program Files (x86)\WiX Toolset v3.11\bin\heat.exe" dir "..\..\..\S1FileSync\bin\Release\publish" -cg HeatGenerated_MainAppComponents -gg -scom -sreg -sfrag -srd -out "..\..\GeneratedFiles\MainAppFiles.wxs"
-"C:\Program Files (x86)\WiX Toolset v3.11\bin\heat.exe" dir "..\..\..\S1FileSyncService\bin\Release\publish" -cg HeatGenerated_ServiceComponents -gg -scom -sreg -sfrag -srd -out "..\..\GeneratedFiles\ServiceFiles.wxs"</PreBuildEvent>
+    <PreBuildEvent />
   </PropertyGroup>
   <!--
 	To modify your build process, add your task inside one of the targets below and uncomment it.
