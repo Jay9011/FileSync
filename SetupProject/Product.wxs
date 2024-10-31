@@ -36,7 +36,6 @@
 			<ComponentGroupRef Id="CombinedComponents"/>
 			<ComponentRef Id="ServiceExecutable" />
 			<ComponentRef Id="ServiceInfoFile" />
-			<ComponentRef Id="SettingsFile" />
 		</Feature>
 
 		<UI>
@@ -72,14 +71,6 @@
 			<File Id="ServiceInfoINI"
 			      Name="ServiceInfo.ini"
 			      Source="$(var.ServiceConfigFolder)\ServiceInfo.ini"
-			      KeyPath="yes" />
-		</Component>
-	</Fragment>
-	<Fragment>
-		<Component Id="SettingsFile" Directory="INSTALLFOLDER" Guid="*">
-			<File Id="SettingsINI"
-			      Name="settings.ini"
-			      Source="$(var.ServiceConfigFolder)\settings.ini"
 			      KeyPath="yes" />
 		</Component>
 	</Fragment>
