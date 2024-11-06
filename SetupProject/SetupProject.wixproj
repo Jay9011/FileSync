@@ -68,10 +68,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Components\" />
     <Folder Include="Config" />
     <Folder Include="GeneratedFiles" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Components\Registry.wxs" />
     <Content Include="Config\ServiceInfo.ini" />
     <Content Include="Config\settings.ini" />
     <Content Include="GenerateCommonFolder.ps1" />

@@ -1,31 +1,79 @@
-﻿using System.Text;
+﻿using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using System.Windows.Forms;
 using Microsoft.Extensions.DependencyInjection;
+using S1FileSync.Services.Interface;
 using S1FileSync.ViewModels;
 using S1FileSync.Views;
+using Application = System.Windows.Application;
 
 namespace S1FileSync
 {
     public partial class MainWindow : Window
     {
-        private readonly IServiceProvider _serviceProvider;
+        #region 의존 주입
         
-        public MainWindow(IServiceProvider serviceProvider, MainViewModel mainViewModel)
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ITrayIconService _trayIconService;
+
+        #endregion
+        
+        public MainWindow(IServiceProvider serviceProvider, MainViewModel mainViewModel, ITrayIconService trayIconService)
         {
             InitializeComponent();
+
+            #region 의존 주입
+
             _serviceProvider = serviceProvider;
+            _trayIconService = trayIconService;
+
+            #endregion
+            
             DataContext = mainViewModel;
             
             var settingsView = _serviceProvider.GetService<SettingsView>();
             SettingsFrame.Navigate(settingsView);
+            
+            // 트레이 아이콘 서비스
+            _trayIconService.WindowOpenRequested += WindowOpenRequested;
+            _trayIconService.ShutdownRequested += ShutdownRequested;
+            StateChanged += MainWindowStateChanged;
+            Closing += MainWindowClosing;
+            _trayIconService.Initialize();
+        }
+
+        private void WindowOpenRequested(object? sender, EventArgs e)
+        {
+            if (sender is ToolStripMenuItem)
+            {
+                // TODO
+            }
+            else if (sender is NotifyIcon)
+            {
+                // TODO
+            }
+            
+            Show();
+            WindowState = WindowState.Normal;
+        }
+
+        private void ShutdownRequested(object? sender, EventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void MainWindowStateChanged(object? sender, EventArgs e)
+        {
+            if (WindowState == WindowState.Minimized)
+            {
+                Hide();
+            }
+        }
+
+        private void MainWindowClosing(object? sender, CancelEventArgs e)
+        {
+            e.Cancel = true;
+            Hide();
         }
 
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)

@@ -1,9 +1,11 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using System.Security.Cryptography;
 using NetConnectionHelper.Helpers;
 using NetConnectionHelper.Interface;
 using S1FileSync.Models;
 using S1FileSync.Services.Interface;
+using S1FileSync.ViewModels;
 using S1FileSyncService.Services.Interfaces;
 
 namespace S1FileSyncService.Services;
@@ -15,16 +17,24 @@ public class FileSyncService : IFileSync
     private readonly ILogger<FileSyncWorker> _logger;
     private readonly ISettingsService _settingsService;
     private readonly IRemoteConnectionHelper _connectionHelper;
+    private readonly FileSyncProgressViewModel _progressViewModel;
 
     #endregion
     
-    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper)
+    private const int LargeFileSize = 50 * 1024 * 1024;
+    private const float BufferSizeFactor = 0.5f;
+    private const int MinBufferSize = 32 * 1024;
+    private const int MaxBufferSize = 256 * 1024;
+    private const int UIUpdateInterval = 100;
+    
+    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, FileSyncProgressViewModel progressViewModel)
     {
         #region 의존 주입
         
         _logger = logger;
         _settingsService = settingsService;
         _connectionHelper = connectionHelper;
+        _progressViewModel = progressViewModel;
 
         #endregion
     }
@@ -79,7 +89,7 @@ public class FileSyncService : IFileSync
                 localFilePath = Path.Combine(localPath, relativeFilePath);
             }
 
-            await SyncFile(remoteFile.FullName, localFilePath, settings);
+            await SyncFile(remoteFile, localFilePath, settings);
         });
         
         await Task.WhenAll(tasks);
@@ -91,7 +101,7 @@ public class FileSyncService : IFileSync
     /// <param name="sourceFilePath">원본 파일 경로</param>
     /// <param name="destFilePath">목적 파일 경로</param>
     /// <param name="settings"></param>
-    private async Task SyncFile(string sourceFilePath, string destFilePath, SyncSettings settings)
+    private async Task SyncFile(FileInfo remoteFileInfo, string destFilePath, SyncSettings settings)
     {
         bool shouldCopy = true;
 
@@ -103,7 +113,7 @@ public class FileSyncService : IFileSync
                     shouldCopy = false;
                     break;
                 case SyncSettings.DuplicateFileHandling.ReplaceIfDifferent:
-                    shouldCopy = await IsFileChangedAsync(sourceFilePath, destFilePath);
+                    shouldCopy = await IsFileChangedAsync(remoteFileInfo, destFilePath);
                     break;
                 case SyncSettings.DuplicateFileHandling.KeepBoth:
                     destFilePath = GetUniqueFileName(destFilePath);
@@ -122,7 +132,7 @@ public class FileSyncService : IFileSync
                 Directory.CreateDirectory(directory);
             }
             
-            await CopyFileAsync(sourceFilePath, destFilePath);
+            await CopyFileAsync(remoteFileInfo, destFilePath);
         }
     }
 
@@ -179,24 +189,25 @@ public class FileSyncService : IFileSync
     /// <summary>
     /// 파일 변경 여부 확인
     /// </summary>
+    /// <param name="remoteFileInfo">원격 파일 정보</param>
     /// <param name="localFilePath">로컬 파일 경로</param>
-    /// <param name="remoteFilePath">원격 파일 경로</param>
     /// <returns></returns>
-    private async Task<bool> IsFileChangedAsync(string localFilePath, string remoteFilePath)
+    private async Task<bool> IsFileChangedAsync(FileInfo remoteFileInfo, string localFilePath)
     {
-        using (var md5 = MD5.Create())
+        var localFileInfo = new FileInfo(localFilePath);
+
+        if (remoteFileInfo.Length != localFileInfo.Length)
         {
-            using (var localStream = File.OpenRead(localFilePath))
-            using (var remoteStream = File.OpenRead(remoteFilePath))
-            {
-                var localHash = md5.ComputeHashAsync(localStream);
-                var remoteHash = md5.ComputeHashAsync(remoteStream);
-                
-                await Task.WhenAll(localHash, remoteHash);
-                
-                return !localHash.Result.SequenceEqual(remoteHash.Result);
-            }
+            return true;
         }
+        
+        TimeSpan timeDifference = remoteFileInfo.LastWriteTimeUtc - localFileInfo.LastWriteTimeUtc;
+        if (Math.Abs(timeDifference.TotalSeconds) >= 1)
+        {
+            return true;
+        }
+        
+        return false;
     }
 
     /// <summary>
@@ -204,7 +215,7 @@ public class FileSyncService : IFileSync
     /// </summary>
     /// <param name="sourceFilePath">원본 파일 경로</param>
     /// <param name="destinationFilePath">대상 파일 경로</param>
-    private async Task CopyFileAsync(string sourceFilePath, string destinationFilePath)
+    private async Task CopyFileAsync(FileInfo sourceFileInfo, string destinationFilePath)
     {
         var directory = Path.GetDirectoryName(destinationFilePath);
         if (!Directory.Exists(directory))
@@ -212,10 +223,53 @@ public class FileSyncService : IFileSync
             if (directory != null) Directory.CreateDirectory(directory);
         }
         
-        using (var sourceStream = new FileStream(sourceFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
-        using (var destinationStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
+        var progressItem = _progressViewModel.AddOrUpdateItem(
+            Path.GetFileName(sourceFileInfo.Name),
+            sourceFileInfo.Length);
+        
+        int bufferSize = DetermineBufferSize(sourceFileInfo.Length);
+        byte[] buffer = new byte[bufferSize];
+        
+        long totalByteRead = 0;
+        var sw = Stopwatch.StartNew();
+        
+        try
         {
-            await sourceStream.CopyToAsync(destinationStream);
+            using (var sourceStream = new FileStream(sourceFileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            using (var destinationStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
+                int bytesRead;
+                DateTime lastUpdate = DateTime.Now;
+
+                while ((bytesRead = await sourceStream.ReadAsync(buffer)) > 0)
+                {
+                    await destinationStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                    totalByteRead += bytesRead;
+
+                    var now = DateTime.Now;
+                    if ((now - lastUpdate).TotalMilliseconds >= UIUpdateInterval)
+                    {
+                        double progress = (double)totalByteRead / sourceFileInfo.Length * 100;
+                        double speed = totalByteRead / sw.Elapsed.TotalSeconds;
+                        
+                        progressItem.Progress = progress;
+                        progressItem.SyncSpeed = speed;
+                        lastUpdate = now;
+                    }
+                    
+                }
+            }
+
+            File.SetLastWriteTimeUtc(destinationFilePath, sourceFileInfo.LastWriteTimeUtc);
+
+            progressItem.Progress = 100;
+            progressItem.SyncSpeed = 0;
+            progressItem.IsCompleted = true;
+            progressItem.LastSyncTime = DateTime.Now;
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, $"파일 동기화 중 오류가 발생했습니다: {destinationFilePath}" );
         }
     }
 
@@ -229,4 +283,27 @@ public class FileSyncService : IFileSync
     {
         return fullPath.Substring(basePath.Length).TrimStart(Path.DirectorySeparatorChar);
     }
+    
+    /// <summary>
+    /// 파일 크기에 따른 버퍼 크기 결정
+    /// </summary>
+    /// <param name="fileSize">파일 크기</param>
+    /// <returns>버퍼 크기</returns>
+    /// <exception cref="NotImplementedException"></exception>
+    private int DetermineBufferSize(long fileSize)
+    {
+        if (fileSize <= MinBufferSize)
+        {
+            return MinBufferSize;
+        }
+
+        if (fileSize >= LargeFileSize)
+        {
+            return MaxBufferSize;
+        }
+        
+        int calculatedSize = (int)(fileSize * BufferSizeFactor);
+        return Math.Clamp(calculatedSize, MinBufferSize, MaxBufferSize);
+    }
+
 }

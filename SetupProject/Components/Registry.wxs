@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+        <DirectoryRef Id="INSTALLFOLDER">
+            <Component Id="StartupRegistryEntry" Guid="*">
+                <RegistryKey Root="HKCU"
+                             Key="Software\S1FileSync">
+                    <RegistryValue Name="InstallPath"
+                                   Value="[INSTALLFOLDER]"
+                                   Type="string"/>
+                    <RegistryValue Name="Version"
+                                   Value="1.0.0.0"
+                                   Type="string"/>
+                </RegistryKey>
+                <RegistryValue Root="HKCU"
+                               Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                               Name="S1FileSync"
+                               Value="[INSTALLFOLDER]S1FileSync.exe"
+                               Type="string"
+                               KeyPath="yes"/>
+            </Component>
+        </DirectoryRef>
+    </Fragment>
+</Wix>

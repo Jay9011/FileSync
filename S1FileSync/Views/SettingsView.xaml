@@ -6,7 +6,9 @@
       xmlns:local="clr-namespace:S1FileSync.Views"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
-      Title="SettingsView">
+      Title="SettingsView"
+      xmlns:model="clr-namespace:S1FileSync.ViewModels"
+      d:DataContext="{d:DesignInstance Type=model:SettingsViewModel}">
 
     <Grid Margin="20">
         <Grid.ColumnDefinitions>

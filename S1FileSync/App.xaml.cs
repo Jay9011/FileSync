@@ -63,12 +63,15 @@ namespace S1FileSync
             // Views
             services.AddSingleton<MainWindow>();
             services.AddSingleton<SettingsView>();
+            services.AddSingleton<FileSyncProgressView>();
 
             // ViewModels
             services.AddTransient<MainViewModel>();
             services.AddTransient<SettingsViewModel>();
 
             // Services
+            services.AddSingleton<ITrayIconService, TrayIconService>();
+            services.AddSingleton<IServiceControlService, ServiceControlService>();
             services.AddSingleton<IRemoteConnectionHelper, RemoteConnectionSmbHelper>();
             services.AddSingleton<IPopupService, WindowPopupService>();
             services.AddSingleton<IIniFileHelper>(sp => new IniFileHelper(Path.Combine(Directory.GetCurrentDirectory(), "settings.ini")));

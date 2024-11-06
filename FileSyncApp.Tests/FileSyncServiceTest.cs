@@ -5,6 +5,7 @@ using NetConnectionHelper;
 using NetConnectionHelper.Interface;
 using S1FileSync.Models;
 using S1FileSync.Services.Interface;
+using S1FileSync.ViewModels;
 using S1FileSyncService;
 using S1FileSyncService.Services;
 
@@ -17,6 +18,7 @@ namespace FileSyncApp.Tests
         private readonly Mock<ILogger<FileSyncWorker>> _loggerMock;
         private readonly Mock<ISettingsService> _settingsServiceMock;
         private readonly IRemoteConnectionHelper _remoteConnectionHelper;
+        private readonly FileSyncProgressViewModel _fileSyncProgressViewModel;
         private readonly FileSyncService _fileSyncService;
         
         public FileSyncServiceTest()
@@ -38,7 +40,8 @@ namespace FileSyncApp.Tests
             });
             
             _remoteConnectionHelper = new RemoteConnectionSmbHelper();
-            _fileSyncService = new FileSyncService(_loggerMock.Object, _settingsServiceMock.Object, _remoteConnectionHelper);
+            _fileSyncProgressViewModel = new FileSyncProgressViewModel();
+            _fileSyncService = new FileSyncService(_loggerMock.Object, _settingsServiceMock.Object, _remoteConnectionHelper, _fileSyncProgressViewModel);
         }
         
         [Fact]

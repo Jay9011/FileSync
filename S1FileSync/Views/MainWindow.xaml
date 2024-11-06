@@ -6,32 +6,137 @@
         xmlns:local="clr-namespace:S1FileSync"
         xmlns:views="clr-namespace:S1FileSync.Views"
         mc:Ignorable="d"
-        Title="MainWindow"
+        Title="File Synchronization"
         Width="800" Height="550"
+        MinWidth="600" MinHeight="400"
         MaxHeight="{x:Static SystemParameters.MaximizedPrimaryScreenHeight}"
         MaxWidth="{x:Static SystemParameters.MaximizedPrimaryScreenWidth}"
+        xmlns:model="clr-namespace:S1FileSync.ViewModels"
+        d:DataContext="{d:DesignInstance Type=model:MainViewModel}"
         Icon="/Assets/app.ico"
-        >
+        Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+    <Window.Resources>
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Background" Value="#007ACC"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#005999"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#CCCCCC"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- 상단 메뉴바 -->
         <Menu Grid.Row="0">
             <MenuItem Header="File">
                 <MenuItem Header="Exit" Click="ExitMenuItem_Click"></MenuItem>
             </MenuItem>
+            <MenuItem Header="Sync">
+                <MenuItem Header="Start Synchronization"
+                          Command="{Binding StartSyncCommand}"
+                          IsEnabled="{Binding IsServiceRunning, Converter={StaticResource InverseBoolConverter}}"/>
+                <MenuItem Header="Stop Synchronization"
+                            Command="{Binding StopSyncCommand}"
+                            IsEnabled="{Binding IsServiceRunning}"/>
+                <Separator/>
+                <MenuItem Header="Service Status">
+                    <MenuItem Header="{Binding ServiceStatus}" IsEnabled="False"/>
+                </MenuItem>
+            </MenuItem>
         </Menu>
 
-        <TabControl Grid.Row="1">
-            <TabItem Header="Sync Status">
-                <StackPanel Margin="10">
-                    <TextBlock Text="Current Status:" FontWeight="Bold"></TextBlock>
-                    <TextBlock Text="{Binding Status}"></TextBlock>
-                    <Button Content="Start Sync" Command="{Binding StartSyncCommand}" Margin="0,10,0,0"></Button>
-                    <Button Content="Stop Sync" Command="{Binding StopSyncCommand}" Margin="0,10,0,0"></Button>
-                </StackPanel>
+        <!-- 탭 컨트롤 -->
+        <TabControl Grid.Row="1" Margin="0,5,0,0">
+            <TabControl.Resources>
+                <Style TargetType="TabItem">
+                    <Setter Property="Padding" Value="15,5"/>
+                    <Setter Property="HeaderTemplate">
+                        <Setter.Value>
+                            <DataTemplate>
+                                <TextBox Text="{Binding}" FontSize="14"/>
+                            </DataTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TabControl.Resources>
+            
+            <TabItem Header="Synchronization">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- 진행 현황 뷰 -->
+                    <Border Grid.Row="0"
+                            Margin="15"
+                            BorderThickness="1"
+                            BorderBrush="#DDDDDD"
+                            Background="#F9F9F9"
+                            CornerRadius="4">
+                        <views:FileSyncProgressView/>
+                    </Border>
+                    
+                    <!-- 동기화 관련 항목 -->
+                    <Border Grid.Row="1"
+                            Background="#F0F0F0"
+                            BorderBrush="#DDDDDD"
+                            BorderThickness="0,1,0,0"
+                            Padding="15">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- 동기화 상태 -->
+                            <TextBlock Grid.Column="0" 
+                                       Text="{Binding ServiceStatus}"
+                                       VerticalAlignment="Center"
+                                       Margin="5,0"/>
+                            
+                            <!-- 동기화 시작/중지 버튼 -->
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right">
+                                <Button Content="Start Sync"
+                                        Style="{StaticResource ModernButton}"
+                                        Command="{Binding StartSyncCommand}"
+                                        IsEnabled="{Binding IsServiceRunning, Converter={StaticResource InverseBoolConverter}}"/>
+                                <Button Content="Stop Sync"
+                                        Style="{StaticResource ModernButton}"
+                                        Command="{Binding StopSyncCommand}"
+                                        IsEnabled="{Binding IsServiceRunning}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
             </TabItem>
             <TabItem Header="Settings">
                 <Frame x:Name="SettingsFrame" NavigationUIVisibility="Hidden"></Frame>

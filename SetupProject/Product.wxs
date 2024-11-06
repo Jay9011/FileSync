@@ -36,6 +36,7 @@
 			<ComponentGroupRef Id="CombinedComponents"/>
 			<ComponentRef Id="ServiceExecutable" />
 			<ComponentRef Id="ServiceInfoFile" />
+			<ComponentRef Id="StartupRegistryEntry" />
 		</Feature>
 
 		<UI>
