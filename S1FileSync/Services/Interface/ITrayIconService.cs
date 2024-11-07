@@ -15,4 +15,9 @@ public interface ITrayIconService
     /// 트레이 아이콘 초기화
     /// </summary>
     void Initialize();
+    /// <summary>
+    /// 트레이 아이콘 상태 설정
+    /// </summary>
+    /// <param name="status"></param>
+    void SetStatus(TrayIconStatus status);
 }

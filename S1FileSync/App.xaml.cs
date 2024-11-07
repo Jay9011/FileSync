@@ -60,15 +60,6 @@ namespace S1FileSync
 
         private void ConfigureServices(IServiceCollection services)
         {
-            // Views
-            services.AddSingleton<MainWindow>();
-            services.AddSingleton<SettingsView>();
-            services.AddSingleton<FileSyncProgressView>();
-
-            // ViewModels
-            services.AddTransient<MainViewModel>();
-            services.AddTransient<SettingsViewModel>();
-
             // Services
             services.AddSingleton<ITrayIconService, TrayIconService>();
             services.AddSingleton<IServiceControlService, ServiceControlService>();
@@ -76,6 +67,16 @@ namespace S1FileSync
             services.AddSingleton<IPopupService, WindowPopupService>();
             services.AddSingleton<IIniFileHelper>(sp => new IniFileHelper(Path.Combine(Directory.GetCurrentDirectory(), "settings.ini")));
             services.AddSingleton<ISettingsService, SettingsService>();
+
+            // ViewModels
+            services.AddSingleton<FileSyncProgressViewModel>();
+            services.AddTransient<SettingsViewModel>();
+            services.AddTransient<MainViewModel>();
+
+            // Views
+            services.AddSingleton<FileSyncProgressView>();
+            services.AddSingleton<SettingsView>();
+            services.AddSingleton<MainWindow>();
 
             // Helpers
             services.AddTransient<IniFileHelper>();

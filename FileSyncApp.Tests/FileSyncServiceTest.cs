@@ -4,6 +4,7 @@ using Moq;
 using NetConnectionHelper;
 using NetConnectionHelper.Interface;
 using S1FileSync.Models;
+using S1FileSync.Services;
 using S1FileSync.Services.Interface;
 using S1FileSync.ViewModels;
 using S1FileSyncService;
@@ -20,6 +21,7 @@ namespace FileSyncApp.Tests
         private readonly IRemoteConnectionHelper _remoteConnectionHelper;
         private readonly FileSyncProgressViewModel _fileSyncProgressViewModel;
         private readonly FileSyncService _fileSyncService;
+        private readonly ITrayIconService _trayIconService;
         
         public FileSyncServiceTest()
         {
@@ -38,10 +40,11 @@ namespace FileSyncApp.Tests
                 FolderPattern = "Person_{{yyMMdd}}",
                 FileExtensions = "txt, jpg, png"
             });
+            _trayIconService = new TrayIconService();
             
             _remoteConnectionHelper = new RemoteConnectionSmbHelper();
             _fileSyncProgressViewModel = new FileSyncProgressViewModel();
-            _fileSyncService = new FileSyncService(_loggerMock.Object, _settingsServiceMock.Object, _remoteConnectionHelper, _fileSyncProgressViewModel);
+            _fileSyncService = new FileSyncService(_loggerMock.Object, _settingsServiceMock.Object, _remoteConnectionHelper, _fileSyncProgressViewModel, _trayIconService);
         }
         
         [Fact]

@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using NetConnectionHelper.Helpers;
 using NetConnectionHelper.Interface;
 using S1FileSync.Models;
+using S1FileSync.Services;
 using S1FileSync.Services.Interface;
 using S1FileSync.ViewModels;
 using S1FileSyncService.Services.Interfaces;
@@ -18,16 +19,26 @@ public class FileSyncService : IFileSync
     private readonly ISettingsService _settingsService;
     private readonly IRemoteConnectionHelper _connectionHelper;
     private readonly FileSyncProgressViewModel _progressViewModel;
+    private readonly ITrayIconService _trayIconService;
 
     #endregion
-    
+
+    #region 파일 버퍼 관련
+
     private const int LargeFileSize = 50 * 1024 * 1024;
     private const float BufferSizeFactor = 0.5f;
     private const int MinBufferSize = 32 * 1024;
     private const int MaxBufferSize = 256 * 1024;
+
+    #endregion
+
+    #region UI 관련
+
     private const int UIUpdateInterval = 100;
+
+    #endregion
     
-    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, FileSyncProgressViewModel progressViewModel)
+    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, FileSyncProgressViewModel progressViewModel, ITrayIconService trayIconService)
     {
         #region 의존 주입
         
@@ -35,6 +46,7 @@ public class FileSyncService : IFileSync
         _settingsService = settingsService;
         _connectionHelper = connectionHelper;
         _progressViewModel = progressViewModel;
+        _trayIconService = trayIconService;
 
         #endregion
     }
@@ -54,11 +66,16 @@ public class FileSyncService : IFileSync
                 return;
             }
             
+            _trayIconService.SetStatus(TrayIconStatus.Syncing);
+            
             await SyncDirectory(settings.LocalLocation, remoteUncPath);
+            
+            _trayIconService.SetStatus(TrayIconStatus.Normal);
         }
         catch (Exception e)
         {
             _logger.LogError(e, "파일 동기화 중 오류가 발생했습니다.");
+            _trayIconService.SetStatus(TrayIconStatus.Error);
         }
     }
 

@@ -18,7 +18,7 @@ namespace S1FileSync
 
         #endregion
         
-        public MainWindow(IServiceProvider serviceProvider, MainViewModel mainViewModel, ITrayIconService trayIconService)
+        public MainWindow(MainViewModel mainViewModel, IServiceProvider serviceProvider, ITrayIconService trayIconService, SettingsView settingsView, FileSyncProgressView progressView)
         {
             InitializeComponent();
 
@@ -31,9 +31,9 @@ namespace S1FileSync
             
             DataContext = mainViewModel;
             
-            var settingsView = _serviceProvider.GetService<SettingsView>();
             SettingsFrame.Navigate(settingsView);
-            
+            ProgressViewContainer.Content = progressView;
+
             // 트레이 아이콘 서비스
             _trayIconService.WindowOpenRequested += WindowOpenRequested;
             _trayIconService.ShutdownRequested += ShutdownRequested;

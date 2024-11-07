@@ -15,6 +15,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "S1FileSyncService", "S1File
 EndProject
 Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "SetupProject", "SetupProject\SetupProject.wixproj", "{DA1E6131-892B-49EA-BDF9-BEB2FAFE058A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NamedPipeLine", "NamedPipeLine\NamedPipeLine.csproj", "{97B833BF-FDA7-41A4-A51A-75D9C5B666D2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,14 @@ Global
 		{DA1E6131-892B-49EA-BDF9-BEB2FAFE058A}.Release|Any CPU.Build.0 = Release|x86
 		{DA1E6131-892B-49EA-BDF9-BEB2FAFE058A}.Release|x86.ActiveCfg = Release|x86
 		{DA1E6131-892B-49EA-BDF9-BEB2FAFE058A}.Release|x86.Build.0 = Release|x86
+		{97B833BF-FDA7-41A4-A51A-75D9C5B666D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97B833BF-FDA7-41A4-A51A-75D9C5B666D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97B833BF-FDA7-41A4-A51A-75D9C5B666D2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{97B833BF-FDA7-41A4-A51A-75D9C5B666D2}.Debug|x86.Build.0 = Debug|Any CPU
+		{97B833BF-FDA7-41A4-A51A-75D9C5B666D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97B833BF-FDA7-41A4-A51A-75D9C5B666D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97B833BF-FDA7-41A4-A51A-75D9C5B666D2}.Release|x86.ActiveCfg = Release|Any CPU
+		{97B833BF-FDA7-41A4-A51A-75D9C5B666D2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

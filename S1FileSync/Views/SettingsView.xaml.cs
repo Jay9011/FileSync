@@ -7,12 +7,22 @@ namespace S1FileSync.Views
 {
     public partial class SettingsView : Page
     {
+        #region 의존 주입
+
         private readonly SettingsViewModel _viewModel;
+
+        #endregion
         
         public SettingsView(SettingsViewModel viewModel)
         {
             InitializeComponent();
+
+            #region 의존 주입
+
             _viewModel = viewModel;
+
+            #endregion
+           
             DataContext = _viewModel;
 
             this.Loaded += (s, e) =>
@@ -22,25 +32,21 @@ namespace S1FileSync.Views
                     PasswordBox.Password = _viewModel.Settings.Password;
                 }
             };
-            
-            // Settings가 변경되면 PasswordBox에도 반영
-            _viewModel.PropertyChanged += (s, e) =>
+
+            this.DataContextChanged += (s, e) =>
             {
-                if (e.PropertyName == nameof(SettingsViewModel.Settings))
+                if (e.NewValue is SettingsViewModel vm)
                 {
-                    PasswordBox.Password = _viewModel.Settings.Password;
+                    PasswordBox.Password = vm.Settings.Password;
                 }
             };
-            
+
             PasswordBox.PasswordChanged += PasswordBox_PasswordChanged;
         }
         
         private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
         {
-            if (DataContext is SettingsViewModel vm)
-            {
-                vm.Settings.Password = PasswordBox.Password;
-            }
+            _viewModel.Settings.Password = PasswordBox.Password;
         }
     }
 }
