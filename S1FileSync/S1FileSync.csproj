@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FileIOHelper\FileIOHelper.csproj" />
+    <ProjectReference Include="..\NamedPipeLine\NamedPipeLine.csproj" />
     <ProjectReference Include="..\NetConnectionHelper\NetConnectionHelper.csproj" />
   </ItemGroup>
 
