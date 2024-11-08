@@ -19,8 +19,11 @@ namespace NamedPipeLine.Services
         private readonly CancellationTokenSource _cancellationToken;
         private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
         private bool _isRunning;
+        private bool _isConnected;
         
         private Task? _messageListenerTask;
+        
+        public bool IsConnected => _isConnected && _pipeClientStream.IsConnected;
         
         public NamedPipeClient(string pipeName, string serverName = ".", IMessageSerializer? serializer = null)
         {
@@ -36,7 +39,7 @@ namespace NamedPipeLine.Services
             await _connectionLock.WaitAsync(cancellationToken);
             try
             {
-                if (_isRunning)
+                if (_isRunning && _pipeClientStream.IsConnected)
                 {
                     return;
                 }
@@ -46,6 +49,7 @@ namespace NamedPipeLine.Services
                     await _pipeClientStream.ConnectAsync(cancellationToken);
                 }
                 
+                _isConnected = true;
                 _isRunning = true;
                 _messageListenerTask = StartListeningAsync(cancellationToken);
             }
@@ -55,6 +59,7 @@ namespace NamedPipeLine.Services
                 {
                     _pipeClientStream.Close();
                 }
+                _isConnected = false;
                 throw;
             }
             finally
@@ -110,10 +115,12 @@ namespace NamedPipeLine.Services
                 }
                 catch (OperationCanceledException) when (linkedCancellationToken.IsCancellationRequested)
                 {
+                    _isConnected = false;
                     break;
                 }
                 catch (Exception e)
                 {
+                    _isConnected = false;
                     if (_pipeClientStream.IsConnected)
                     {
                         _pipeClientStream.Close();
@@ -121,6 +128,8 @@ namespace NamedPipeLine.Services
                     break;
                 }
             }
+            
+            _isConnected = false;
         }
 
         public async Task DisconnectAsync()
@@ -129,6 +138,7 @@ namespace NamedPipeLine.Services
             try
             {
                 _isRunning = false;
+                _isConnected = false;
 
                 if (_pipeClientStream.IsConnected)
                 {

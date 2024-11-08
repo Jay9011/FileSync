@@ -68,6 +68,8 @@
                 <Separator/>
                 <MenuItem Header="Service Status">
                     <MenuItem Header="{Binding ServiceStatus}" IsEnabled="False"/>
+                    <MenuItem Header="IPC Connection:" IsEnabled="False"/>
+                    <MenuItem Header="{Binding IPCStatus}" IsEnabled="False"/>
                 </MenuItem>
             </MenuItem>
         </Menu>

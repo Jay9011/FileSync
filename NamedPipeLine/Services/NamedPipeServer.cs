@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using NamedPipeLine.Interfaces;
@@ -14,12 +16,12 @@ namespace NamedPipeLine.Services
         public event EventHandler<T>? MessageReceived;
         
         private readonly string _pipeName;
-        private readonly NamedPipeServerStream _pipeServerStream;
         private readonly IMessageSerializer _serializer;
         private readonly CancellationTokenSource _cancellationToken;
         private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
         private bool _isRunning;
         
+        private NamedPipeServerStream? _pipeServerStream;
         private Task? _messageListenerTask;
 
         public NamedPipeServer(string pipeName, IMessageSerializer? serializer = null)
@@ -32,10 +34,10 @@ namespace NamedPipeLine.Services
                 1,
                 PipeTransmissionMode.Message, 
                 PipeOptions.Asynchronous
-                );
+            );
             _cancellationToken = new CancellationTokenSource();
         }
-        
+
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             await _connectionLock.WaitAsync(cancellationToken);
@@ -46,7 +48,7 @@ namespace NamedPipeLine.Services
                 {
                     return;
                 }
-
+                
                 _isRunning = true;
                 _messageListenerTask = StartListeningAsync(cancellationToken);
             }
@@ -64,23 +66,23 @@ namespace NamedPipeLine.Services
             {
                 try
                 {
-                    if (!_pipeServerStream.IsConnected)
-                    {
-                        await _pipeServerStream.WaitForConnectionAsync(linkecCancellationToken.Token);
-                    }
+                    using var pipeServer = new NamedPipeServerStream(
+                        _pipeName,
+                        PipeDirection.In,
+                        1,
+                        PipeTransmissionMode.Message,
+                        PipeOptions.Asynchronous);
 
-                    await ProcessClientMessageAsync(linkecCancellationToken.Token);
+                    await pipeServer.WaitForConnectionAsync(linkecCancellationToken.Token);
+
+                    await ProcessClientMessageAsync(pipeServer, linkecCancellationToken.Token);
                 }
                 catch (OperationCanceledException) when(linkecCancellationToken.Token.IsCancellationRequested)
                 {
                     break;
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    if (_pipeServerStream.IsConnected)
-                    {
-                        _pipeServerStream.Disconnect();
-                    }
                     await Task.Delay(1000, linkecCancellationToken.Token);
                 }
             }
@@ -88,29 +90,40 @@ namespace NamedPipeLine.Services
 
         public async Task SendMessageAsync(T message)
         {
-            if (!_pipeServerStream.IsConnected)
-            {
-                throw new InvalidOperationException("Pipe is not connected");
-            }
-
             try
             {
-                using var writer = new StreamWriter(_pipeServerStream) { AutoFlush = true };
-                string messageText = _serializer.Serialize(message);
-                await writer.WriteLineAsync(messageText);
-            }
-            catch (Exception e)
-            {
-                if (_pipeServerStream.IsConnected)
+                using var pipeServer = new NamedPipeServerStream(
+                    _pipeName,
+                    PipeDirection.Out,
+                    1,
+                    PipeTransmissionMode.Message,
+                    PipeOptions.Asynchronous);
+                
+                using var timeoutCancellationTokenSource = new CancellationTokenSource(100);
+
+                try
                 {
-                    _pipeServerStream.Disconnect();
+                    await pipeServer.WaitForConnectionAsync(timeoutCancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
                 }
 
-                throw;
+                if (pipeServer.IsConnected)
+                {
+                    using var writer = new StreamWriter(_pipeServerStream) { AutoFlush = true };
+                    string messageText = _serializer.Serialize(message);
+                    await writer.WriteLineAsync(messageText);
+                }
+            }
+            catch (Exception)
+            {
+                return;
             }
         }
 
-        private async Task ProcessClientMessageAsync(CancellationToken linkedCancellationToken)
+        private async Task ProcessClientMessageAsync(NamedPipeServerStream pipeServer, CancellationToken linkedCancellationToken)
         {
             using var reader = new StreamReader(_pipeServerStream);
 
@@ -125,23 +138,15 @@ namespace NamedPipeLine.Services
                     }
                 
                     var message = _serializer.Deserialize<T>(messageText);
-                    if (message != null)
-                    {
-                        MessageReceived?.Invoke(this, message);
-                    }
+                    MessageReceived?.Invoke(this, message);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    if (_pipeServerStream.IsConnected)
-                    {
-                        _pipeServerStream.Disconnect();
-                    }
-
                     break;
                 }
             }
         }
-
+        
         public async Task StopAsync()
         {
             _isRunning = false;
@@ -152,7 +157,7 @@ namespace NamedPipeLine.Services
                 await _messageListenerTask;
             }
 
-            if (_pipeServerStream.IsConnected)
+            if (_pipeServerStream is { IsConnected: true })
             {
                 _pipeServerStream.Disconnect();
             }
@@ -162,7 +167,7 @@ namespace NamedPipeLine.Services
         {
             _isRunning = false;
             _cancellationToken.Cancel();
-            _pipeServerStream.Dispose();
+            _pipeServerStream?.Dispose();
             _connectionLock.Dispose();
             _cancellationToken.Dispose();
         }

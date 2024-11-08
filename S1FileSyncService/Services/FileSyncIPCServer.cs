@@ -40,6 +40,7 @@ public class FileSyncIPCServer : IDisposable
             }
 
             await _server.StartAsync(cancellationToken);
+            
             _isConnected = true;
             _logger.LogInformation("IPC server started successfully");
         }

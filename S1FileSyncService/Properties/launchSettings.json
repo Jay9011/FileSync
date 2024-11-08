@@ -2,9 +2,11 @@
   "profiles": {
     "S1FileSyncService": {
       "commandName": "Project",
+      "commandLineArgs": "--console",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },
+      "runAsAdministrator": true,
       "dotnetRunMessages": true
     }
   },

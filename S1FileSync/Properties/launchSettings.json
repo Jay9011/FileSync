@@ -1,7 +1,8 @@
 {
   "profiles": {
     "S1FileSync": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "runAsAdministrator": true
     }
   }
 }

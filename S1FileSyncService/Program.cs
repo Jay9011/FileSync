@@ -18,12 +18,29 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
     ApplicationName = AppDomain.CurrentDomain.FriendlyName,
 });
 
+#if DEBUG
+if (args.Contains("--console"))
+{
+    builder.Services.AddHostedService<FileSyncWorker>();
+}
+else
+{
+    builder.Services.AddWindowsService(options =>
+    {
+        options.ServiceName = "S1FileSyncService";
+    });
+    builder.Services.AddHostedService<FileSyncWorker>();
+}
+#else
+
 builder.Services.AddWindowsService(options =>
 {
     options.ServiceName = "S1FileSyncService";
 });
 
 builder.Services.AddHostedService<FileSyncWorker>();
+
+#endif
 
 // Add services
 builder.Services.AddSingleton<ISettingsService, SettingsService>();

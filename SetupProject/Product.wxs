@@ -58,7 +58,14 @@
 			                DisplayName="S1 File Sync Service"
 			                Description="File synchronization service"
 			                Start="demand"
-			                ErrorControl="normal" />
+			                ErrorControl="normal"
+			                Account="NT AUTHORITY\LocalService"
+			                Password="">
+				<util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" 
+				                    RestartServiceDelayInSeconds="60"
+				                    ResetPeriodInDays="1"/>
+				<Permission User="Users" ServicePipeAccess="readWrite"/>
+			</ServiceInstall>
 
 			<ServiceControl Id="StartService"
 			                Stop="both"

@@ -13,6 +13,8 @@ public class FileSyncIPCClient : IDisposable
     private readonly IIPCClient<FileSyncMessage> _client;
     private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
     private readonly CancellationTokenSource _cancellationToken = new CancellationTokenSource();
+    private readonly Timer _connectionCheckTimer;
+    private Task? _reconnectionTask;
 
     #region 의존 주입
 
@@ -27,7 +29,9 @@ public class FileSyncIPCClient : IDisposable
     private const int MaxRetryAttempts = 3;
     private const int RetryDelayMs = 1000;
     private const int ReconnectIntervalMs = 5000;
-    private bool _isConnected;
+    private const int ConnectionCheckIntervalMs = 1000;
+    private volatile bool _isConnected;
+    private volatile bool _isReconnecting;
 
     #endregion
     
@@ -47,42 +51,56 @@ public class FileSyncIPCClient : IDisposable
 
         _client = new NamedPipeClient<FileSyncMessage>(PipeName);
         _client.MessageReceived += OnMessageReceived;
+        
+        _connectionCheckTimer = new Timer(CheckConnection, null, Timeout.Infinite, Timeout.Infinite);
     }
     
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        _connectionCheckTimer.Change(0, ConnectionCheckIntervalMs);
+        await InitiateConnectionAsync(cancellationToken);
+    }
+
+    private async Task InitiateConnectionAsync(CancellationToken cancellationToken)
+    {
+        try
         {
-            try
-            {
-                await ConnectAsync(cancellationToken);
-                ConnectionStateChanged?.Invoke(this, new ConnectionStatus(true));
-
-                // 연결이 끊어질 때까지 대기
-                while (_isConnected && !cancellationToken.IsCancellationRequested)
-                {
-                    await Task.Delay(1000, cancellationToken);
-                }
-
-                ConnectionStateChanged?.Invoke(this, new ConnectionStatus(false));
-
-                // 재연결 시도 전 대기
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    await Task.Delay(ReconnectIntervalMs, cancellationToken);
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "An error occurred while starting the IPC client");
-                ConnectionStateChanged?.Invoke(this, new ConnectionStatus(false, e.Message));
-                await Task.Delay(ReconnectIntervalMs, cancellationToken);
-            }
+            await ConnectAsync(cancellationToken);
+            ConnectionStateChanged?.Invoke(this, new ConnectionStatus(true));
         }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Initial connection failed");
+            ConnectionStateChanged?.Invoke(this, new ConnectionStatus(false, e.Message));
+            await StartReconnectionTask(cancellationToken);
+        }
+    }
+
+    private async Task StartReconnectionTask(CancellationToken cancellationToken)
+    {
+        if (_isReconnecting)
+        {
+            return;
+        }
+        
+        _isReconnecting = true;
+        _reconnectionTask = Task.Run(async () =>
+        {
+            while (!_isConnected && !cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await ConnectAsync(cancellationToken);
+                    _isReconnecting = false;
+                    ConnectionStateChanged?.Invoke(this, new ConnectionStatus(true));
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, "Reconnection attempt failed");
+                    ConnectionStateChanged?.Invoke(this, new ConnectionStatus(false, e.Message));
+                }
+            }
+        }, cancellationToken);
     }
 
     private async Task ConnectAsync(CancellationToken cancellationToken = default)
@@ -148,17 +166,6 @@ public class FileSyncIPCClient : IDisposable
         throw new CommunicationException("Failed to send message to the IPC server", lastException);
     }
 
-    public void Dispose()
-    {
-        _cancellationToken.Cancel();
-        _connectionLock.Dispose();
-        if (_client is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
-        _cancellationToken.Dispose();
-    }
-    
     private void OnMessageReceived(object? sender, FileSyncMessage message)
     {
         try
@@ -219,6 +226,50 @@ public class FileSyncIPCClient : IDisposable
         {
             _logger.LogError(e, "Error occurred while updating the progress");
         }
+    }
+
+    private void CheckConnection(object? state)
+    {
+        try
+        {
+            bool currentState = (_client as NamedPipeClient<FileSyncMessage>)?.IsConnected ?? false;
+
+            if (currentState != _isConnected)
+            {
+                UpdateConnectionState(currentState);
+                if (!currentState && !_isReconnecting)
+                {
+                    _ = StartReconnectionTask(_cancellationToken.Token);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "An error occurred while checking the connection");
+        }
+    }
+    
+    private void UpdateConnectionState(bool isConnected, string? errorMessage = null)
+    {
+        if (_isConnected == isConnected)
+        {
+            return;
+        }
+        
+        _isConnected = isConnected;
+        ConnectionStateChanged?.Invoke(this, new ConnectionStatus(isConnected, errorMessage));
+    }
+
+    public void Dispose()
+    {
+        _connectionCheckTimer.Dispose();
+        _cancellationToken.Cancel();
+        _connectionLock.Dispose();
+        if (_client is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+        _cancellationToken.Dispose();
     }
 
     public class CommunicationException : Exception
