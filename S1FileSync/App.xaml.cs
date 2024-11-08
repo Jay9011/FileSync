@@ -67,6 +67,7 @@ namespace S1FileSync
             services.AddSingleton<IPopupService, WindowPopupService>();
             services.AddSingleton<IIniFileHelper>(sp => new IniFileHelper(Path.Combine(Directory.GetCurrentDirectory(), "settings.ini")));
             services.AddSingleton<ISettingsService, SettingsService>();
+            services.AddSingleton<FileSyncIPCClient>();
 
             // ViewModels
             services.AddSingleton<FileSyncProgressViewModel>();

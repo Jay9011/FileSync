@@ -147,7 +147,7 @@
                                 <Button Content="Start Sync"
                                         Style="{StaticResource ModernButton}"
                                         Command="{Binding StartSyncCommand}"
-                                        IsEnabled="{Binding IsServiceRunning, Converter={StaticResource InverseBoolConverter}}"/>
+                                        IsEnabled="{Binding IsServiceRunning}"/>
                                 <Button Content="Stop Sync"
                                         Style="{StaticResource ModernButton}"
                                         Command="{Binding StopSyncCommand}"

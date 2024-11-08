@@ -17,7 +17,10 @@ namespace NamedPipeLine.Services
         private readonly NamedPipeClientStream _pipeClientStream;
         private readonly IMessageSerializer _serializer;
         private readonly CancellationTokenSource _cancellationToken;
+        private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
         private bool _isRunning;
+        
+        private Task? _messageListenerTask;
         
         public NamedPipeClient(string pipeName, string serverName = ".", IMessageSerializer? serializer = null)
         {
@@ -30,28 +33,41 @@ namespace NamedPipeLine.Services
         
         public async Task ConnectAsync(CancellationToken cancellationToken = default)
         {
-            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken.Token, cancellationToken);
-            await _pipeClientStream.ConnectAsync(linkedCancellation.Token);
-            _isRunning = true;
-            _ = StartListeningAsync(linkedCancellation.Token);
-        }
-
-        public async Task DisconnectAsync()
-        {
-            _isRunning = false;
-            if (_pipeClientStream.IsConnected)
+            await _connectionLock.WaitAsync(cancellationToken);
+            try
             {
-                _pipeClientStream.Close();
-            }
+                if (_isRunning)
+                {
+                    return;
+                }
 
-            await Task.CompletedTask;
+                if (!_pipeClientStream.IsConnected)
+                {
+                    await _pipeClientStream.ConnectAsync(cancellationToken);
+                }
+                
+                _isRunning = true;
+                _messageListenerTask = StartListeningAsync(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                if (_pipeClientStream.IsConnected)
+                {
+                    _pipeClientStream.Close();
+                }
+                throw;
+            }
+            finally
+            {
+                _connectionLock.Release();
+            }
         }
 
         public async Task SendMessageAsync(T message)
         {
             if (!_pipeClientStream.IsConnected)
             {
-                return;
+                throw new InvalidOperationException("Client is not connected.");
             }
 
             try
@@ -62,20 +78,18 @@ namespace NamedPipeLine.Services
             }
             catch (Exception e)
             {
-                return;
+                if (_pipeClientStream.IsConnected)
+                {
+                    _pipeClientStream.Close();
+                }
+
+                throw;
             }
         }
 
-        public void Dispose()
+        private async Task StartListeningAsync(CancellationToken cancellationToken)
         {
-            _isRunning = false;
-            _cancellationToken.Cancel();
-            _pipeClientStream.Dispose();
-            _cancellationToken.Dispose();
-        }
-        
-        private async Task StartListeningAsync(CancellationToken linkedCancellationToken)
-        {
+            using var linkedCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken.Token, cancellationToken);
             using var reader = new StreamReader(_pipeClientStream);
 
             while (_isRunning && _pipeClientStream.IsConnected && !linkedCancellationToken.IsCancellationRequested)
@@ -100,10 +114,46 @@ namespace NamedPipeLine.Services
                 }
                 catch (Exception e)
                 {
+                    if (_pipeClientStream.IsConnected)
+                    {
+                        _pipeClientStream.Close();
+                    }
                     break;
                 }
             }
         }
 
+        public async Task DisconnectAsync()
+        {
+            await _connectionLock.WaitAsync();
+            try
+            {
+                _isRunning = false;
+
+                if (_pipeClientStream.IsConnected)
+                {
+                    _pipeClientStream.Close();
+                }
+
+                if (_messageListenerTask != null)
+                {
+                    await _messageListenerTask;
+                }
+            }
+            finally
+            {
+                _connectionLock.Release();
+            }
+        }
+
+        public void Dispose()
+        {
+            _isRunning = false;
+            _cancellationToken.Cancel();
+            _connectionLock.Dispose();
+            _pipeClientStream.Close();
+            _pipeClientStream.Dispose();
+            _cancellationToken.Dispose();
+        }
     }
 }

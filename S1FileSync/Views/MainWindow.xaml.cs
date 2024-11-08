@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Forms;
 using Microsoft.Extensions.DependencyInjection;
+using S1FileSync.Services;
 using S1FileSync.Services.Interface;
 using S1FileSync.ViewModels;
 using S1FileSync.Views;
@@ -18,7 +19,7 @@ namespace S1FileSync
 
         #endregion
         
-        public MainWindow(MainViewModel mainViewModel, IServiceProvider serviceProvider, ITrayIconService trayIconService, SettingsView settingsView, FileSyncProgressView progressView)
+        public MainWindow(MainViewModel mainViewModel, IServiceProvider serviceProvider, ITrayIconService trayIconService, SettingsView settingsView, FileSyncProgressView progressView, FileSyncIPCClient ipcClient)
         {
             InitializeComponent();
 
@@ -40,6 +41,8 @@ namespace S1FileSync
             StateChanged += MainWindowStateChanged;
             Closing += MainWindowClosing;
             _trayIconService.Initialize();
+            
+            _ = ipcClient.StartAsync();
         }
 
         private void WindowOpenRequested(object? sender, EventArgs e)

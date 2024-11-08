@@ -18,8 +18,7 @@ public class FileSyncService : IFileSync
     private readonly ILogger<FileSyncWorker> _logger;
     private readonly ISettingsService _settingsService;
     private readonly IRemoteConnectionHelper _connectionHelper;
-    private readonly FileSyncProgressViewModel _progressViewModel;
-    private readonly ITrayIconService _trayIconService;
+    private readonly ISyncProgressWithUI _syncProgressUI;
 
     #endregion
 
@@ -38,15 +37,14 @@ public class FileSyncService : IFileSync
 
     #endregion
     
-    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, FileSyncProgressViewModel progressViewModel, ITrayIconService trayIconService)
+    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, ISyncProgressWithUI syncProgressUi)
     {
         #region 의존 주입
         
         _logger = logger;
         _settingsService = settingsService;
         _connectionHelper = connectionHelper;
-        _progressViewModel = progressViewModel;
-        _trayIconService = trayIconService;
+        _syncProgressUI = syncProgressUi;
 
         #endregion
     }
@@ -66,16 +64,16 @@ public class FileSyncService : IFileSync
                 return;
             }
             
-            _trayIconService.SetStatus(TrayIconStatus.Syncing);
+            // _trayIconService.SetStatus(TrayIconStatus.Syncing);
             
             await SyncDirectory(settings.LocalLocation, remoteUncPath);
             
-            _trayIconService.SetStatus(TrayIconStatus.Normal);
+            // _trayIconService.SetStatus(TrayIconStatus.Normal);
         }
         catch (Exception e)
         {
             _logger.LogError(e, "파일 동기화 중 오류가 발생했습니다.");
-            _trayIconService.SetStatus(TrayIconStatus.Error);
+            // _trayIconService.SetStatus(TrayIconStatus.Error);
         }
     }
 
@@ -240,10 +238,6 @@ public class FileSyncService : IFileSync
             if (directory != null) Directory.CreateDirectory(directory);
         }
         
-        var progressItem = _progressViewModel.AddOrUpdateItem(
-            Path.GetFileName(sourceFileInfo.Name),
-            sourceFileInfo.Length);
-        
         int bufferSize = DetermineBufferSize(sourceFileInfo.Length);
         byte[] buffer = new byte[bufferSize];
         
@@ -269,8 +263,13 @@ public class FileSyncService : IFileSync
                         double progress = (double)totalByteRead / sourceFileInfo.Length * 100;
                         double speed = totalByteRead / sw.Elapsed.TotalSeconds;
                         
-                        progressItem.Progress = progress;
-                        progressItem.SyncSpeed = speed;
+                        _syncProgressUI.UpdateProgress(
+                            Path.GetFileName(sourceFileInfo.Name),
+                            sourceFileInfo.Length,
+                            progress,
+                            speed
+                        );
+                        
                         lastUpdate = now;
                     }
                     
@@ -278,11 +277,7 @@ public class FileSyncService : IFileSync
             }
 
             File.SetLastWriteTimeUtc(destinationFilePath, sourceFileInfo.LastWriteTimeUtc);
-
-            progressItem.Progress = 100;
-            progressItem.SyncSpeed = 0;
-            progressItem.IsCompleted = true;
-            progressItem.LastSyncTime = DateTime.Now;
+            _syncProgressUI.CompleteProgress(Path.GetFileName(sourceFileInfo.Name));
         }
         catch (Exception e)
         {
