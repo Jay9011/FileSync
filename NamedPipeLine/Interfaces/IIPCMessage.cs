@@ -7,14 +7,25 @@ namespace NamedPipeLine.Interfaces
         /// <summary>
         /// 메시지 식별자
         /// </summary>
-        string MessageId { get;}
+        public string MessageId { get; }
         /// <summary>
         /// 메시지 타입
         /// </summary>
-        string MessageType { get; }
+        public PipeMessageType MessageType { get; set; }
         /// <summary>
         /// 메시지 생성 시간
         /// </summary>
-        DateTime Timestamp { get; }
+        public DateTime Timestamp { get; }
+    }
+    
+    /// <summary>
+    /// 파이프 시스템 메시지 타입
+    /// </summary>
+    public enum PipeMessageType
+    {
+        UserMessage,
+        PipeChanged,
+        Heartbeat,
+        HeartbeatAck
     }
 }

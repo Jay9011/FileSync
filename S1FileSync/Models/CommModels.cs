@@ -46,12 +46,15 @@ public class FileSyncMessage : IPCMessage<FileSyncContent>
 {
     public FileSyncMessage(FileSyncMessageType type, string? message = null, FileSyncProgress? progress = null)
     {
-        MessageType = type.ToString();
         Content = new FileSyncContent
         {
             Type = type,
             Message = message,
             Progress = progress
         };
+    }
+
+    public FileSyncMessage()
+    {
     }
 }

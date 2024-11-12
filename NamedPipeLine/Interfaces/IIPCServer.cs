@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using NamedPipeLine.Models;
 
 namespace NamedPipeLine.Interfaces
 {
-    public interface IIPCServer<T> where T : IIPCMessage
+    public interface IIPCServer<T> where T : class, IIPCMessage, new()
     {
         /// <summary>
         /// 클라이언트로부터 메시지를 수신했을 때 발생하는 이벤트
@@ -21,6 +22,7 @@ namespace NamedPipeLine.Interfaces
         /// </summary>
         /// <returns></returns>
         Task StopAsync();
+
         /// <summary>
         /// 클라이언트로 메시지를 전송
         /// </summary>

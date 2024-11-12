@@ -57,8 +57,8 @@ public class MainViewModel : ViewModelBase
         StopSyncCommand = new RelayCommand(async () => await StopSync());
         CheckStatusCommand = new RelayCommand(async () => await CheckServiceStatus());
         
-        _ipcClient.ConnectionStateChanged += OnIPCConnectionStateChanged;
         _ = CheckServiceStatus();
+        _ipcClient.OnStatusChanged += OnIPCConnectionStateChanged;
     }
 
     /// <summary>
@@ -114,11 +114,9 @@ public class MainViewModel : ViewModelBase
     /// <summary>
     /// IPC 연결 상태 변경시 실행되는 이벤트 메서드
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="status"></param>
-    private void OnIPCConnectionStateChanged(object? sender, FileSyncIPCClient.ConnectionStatus status)
+    private void OnIPCConnectionStateChanged()
     {
-        IPCStatus = status.IsConnected ? "Connected" : $"Disconnected: {(status.ErrorMessage != null ? $" ({status.ErrorMessage})" : "")}";
+        IPCStatus = _ipcClient.IPCStatus;
     }
 
 }

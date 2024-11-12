@@ -43,17 +43,17 @@ namespace S1FileSyncService
             try
             {
                 await LoadSettings();
+                await _ipcServer.StartAsync(stoppingToken);
 
                 using var syncTimer = new PeriodicTimer(_settings.SyncIntervalTimeSpan);
                 using var settingsCheckTimer = new PeriodicTimer(_settingsCheckInterval);
                 
+                _ipcServer.MessageReceived += OnMessageReceived;
+                
 #if DEBUG
-                await _ipcServer.StartAsync(stoppingToken);
                 using var iconUpdateTimer = new PeriodicTimer(_iconUpdateInterval);
 #endif
 
-                _ipcServer.MessageReceived += OnMessageReceived;
-            
                 // 모든 비동기 작업이 완료될 때까지 대기 (각 작업은 PeriodicTimer를 통해 별도의 타이머로 실행)
 #if !DEBUG
                 await Task.WhenAll(

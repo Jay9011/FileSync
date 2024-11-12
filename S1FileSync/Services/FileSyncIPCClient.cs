@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Windows;
+using System.Windows.Threading;
+using Microsoft.Extensions.Logging;
 using NamedPipeLine.Interfaces;
 using NamedPipeLine.Services;
 using S1FileSync.Models;
@@ -9,12 +11,21 @@ namespace S1FileSync.Services;
 
 public class FileSyncIPCClient : IDisposable
 {
+    private string _ipcStatus = "Disconnected";
+
+    public string IPCStatus
+    {
+        get { return _ipcStatus; }
+        private set
+        {
+            _ipcStatus = value;
+            OnStatusChanged?.Invoke();
+        }
+    }
+    
     private const string PipeName = "S1FileSyncPipe";
     private readonly IIPCClient<FileSyncMessage> _client;
-    private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
-    private readonly CancellationTokenSource _cancellationToken = new CancellationTokenSource();
-    private readonly Timer _connectionCheckTimer;
-    private Task? _reconnectionTask;
+    private readonly Dispatcher _UIDispatcher;
 
     #region 의존 주입
 
@@ -23,21 +34,11 @@ public class FileSyncIPCClient : IDisposable
     private readonly FileSyncProgressViewModel _progressViewModel;
 
     #endregion
-
-    #region 재시도 관련
-
-    private const int MaxRetryAttempts = 3;
-    private const int RetryDelayMs = 1000;
-    private const int ReconnectIntervalMs = 5000;
-    private const int ConnectionCheckIntervalMs = 1000;
-    private volatile bool _isConnected;
-    private volatile bool _isReconnecting;
-
-    #endregion
     
-    public event EventHandler<ConnectionStatus>? ConnectionStateChanged;
-
-    public record ConnectionStatus(bool IsConnected, string? ErrorMessage = null);
+    /// <summary>
+    /// 상태 변경 이벤트 연결
+    /// </summary>
+    public Action OnStatusChanged;
 
     public FileSyncIPCClient(ILogger<FileSyncIPCClient> logger, ITrayIconService trayIconService, FileSyncProgressViewModel progressViewModel)
     {
@@ -51,126 +52,55 @@ public class FileSyncIPCClient : IDisposable
 
         _client = new NamedPipeClient<FileSyncMessage>(PipeName);
         _client.MessageReceived += OnMessageReceived;
-        
-        _connectionCheckTimer = new Timer(CheckConnection, null, Timeout.Infinite, Timeout.Infinite);
-    }
-    
-    public async Task StartAsync(CancellationToken cancellationToken = default)
-    {
-        _connectionCheckTimer.Change(0, ConnectionCheckIntervalMs);
-        await InitiateConnectionAsync(cancellationToken);
+        _client.ConnectionStateChanged += OnConnectionStateChanged;
+
+        _UIDispatcher = Application.Current.Dispatcher;
     }
 
-    private async Task InitiateConnectionAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            await ConnectAsync(cancellationToken);
-            ConnectionStateChanged?.Invoke(this, new ConnectionStatus(true));
+            await _client.ConnectAsync(cancellationToken);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Initial connection failed");
-            ConnectionStateChanged?.Invoke(this, new ConnectionStatus(false, e.Message));
-            await StartReconnectionTask(cancellationToken);
+            _logger.LogError(e, "Failed to start the IPC client");
+            throw;
         }
     }
 
-    private async Task StartReconnectionTask(CancellationToken cancellationToken)
+    /// <summary>
+    /// 메시지 수신 이벤트
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="message"></param>
+    private void OnMessageReceived(object? sender, FileSyncMessage message)
     {
-        if (_isReconnecting)
+        if (message?.Content == null)
         {
             return;
         }
         
-        _isReconnecting = true;
-        _reconnectionTask = Task.Run(async () =>
-        {
-            while (!_isConnected && !cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    await ConnectAsync(cancellationToken);
-                    _isReconnecting = false;
-                    ConnectionStateChanged?.Invoke(this, new ConnectionStatus(true));
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e, "Reconnection attempt failed");
-                    ConnectionStateChanged?.Invoke(this, new ConnectionStatus(false, e.Message));
-                }
-            }
-        }, cancellationToken);
-    }
-
-    private async Task ConnectAsync(CancellationToken cancellationToken = default)
-    {
-        await _connectionLock.WaitAsync(cancellationToken);
         try
         {
-            if (_isConnected)
-            {
-                return;
-            }
-
-            await _client.ConnectAsync(cancellationToken);
-            _isConnected = true;
+            _UIDispatcher.BeginInvoke(new Action(() => ProcessMessage(message)));
         }
         catch (Exception e)
         {
-            _isConnected = false;
-            _logger.LogError(e, "An error occurred while connecting to the IPC server");
-            throw;
-        }
-        finally
-        {
-            _connectionLock.Release();
+            _logger.LogError(e, "Error occurred while processing the received message");
         }
     }
-
-    public async Task SendMessageAsync(FileSyncMessage message, CancellationToken cancellationToken = default)
-    {
-        int attempts = 0;
-        Exception? lastException = null;
-
-        while (attempts < MaxRetryAttempts)
-        {
-            try
-            {
-                if (!_isConnected)
-                {
-                    await ConnectAsync(cancellationToken);
-                }
-
-                await _client.SendMessageAsync(message);
-                return;
-            }
-            catch (Exception e)
-            {
-                lastException = e;
-                _logger.LogError(e, $"Failed to send message to the IPC server. Retry attempt: {attempts + 1} / {MaxRetryAttempts}");
-                
-                attempts++;
-                if (attempts < MaxRetryAttempts)
-                {
-                    await Task.Delay(RetryDelayMs * attempts, cancellationToken);
-                }
-                
-                _isConnected = false;
-            }
-        }
-        
-        // 재연결 실패
-        _logger.LogError(lastException, "Failed to send message to the IPC server");
-        ConnectionStateChanged?.Invoke(this, new ConnectionStatus(false, lastException?.Message));
-        throw new CommunicationException("Failed to send message to the IPC server", lastException);
-    }
-
-    private void OnMessageReceived(object? sender, FileSyncMessage message)
+    
+    /// <summary>
+    /// 메시지 처리
+    /// </summary>
+    /// <param name="message"></param>
+    private void ProcessMessage(FileSyncMessage message)
     {
         try
         {
-            switch (message.Content?.Type)
+            switch (message.Content.Type)
             {
                 case FileSyncMessageType.ProgressUpdate:
                 {
@@ -193,89 +123,54 @@ public class FileSyncIPCClient : IDisposable
                     _trayIconService.SetStatus(TrayIconStatus.Error);
                 }
                     break;
-                case FileSyncMessageType.ServiceCommand:
-                    break;
             }
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error occurred while processing the received message");
+            _logger.LogError(e, "Error occurred while processing the message");
         }
     }
-    
+
+    private void OnConnectionStateChanged(object? sender, ConnectionStateChangedEventArgs e)
+    {
+        IPCStatus = e.IsConnected ? "Connected" : $"Disconnected: {(e.ErrorMessage != null ? $" ({e.ErrorMessage})" : "")}";
+    }
+
     private void UpdateProgress(FileSyncProgress progress)
     {
-        try
+        var item = _progressViewModel.AddOrUpdateItem(progress.FileName, progress.FileSize);
+        if (item != null)
         {
-            var item = _progressViewModel.AddOrUpdateItem(progress.FileName, progress.FileSize);
-            if (item != null)
+            item.Progress = progress.Progress;
+            item.SyncSpeed = progress.Speed;
+            item.IsCompleted = progress.IsCompleted;
+
+            if (progress.IsCompleted)
             {
-                item.Progress = progress.Progress;
-                item.SyncSpeed = progress.Speed;
-                item.IsCompleted = progress.IsCompleted;
-
-                if (progress.IsCompleted)
-                {
-                    item.LastSyncTime = DateTime.Now;
-                }
+                item.LastSyncTime = DateTime.Now;
             }
-            
-            _progressViewModel.RemoveCompletedItems();
         }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error occurred while updating the progress");
-        }
+        
+        _progressViewModel.RemoveCompletedItems();
     }
-
-    private void CheckConnection(object? state)
+    
+    public async Task SendMessageAsync(FileSyncMessage message, CancellationToken cancellationToken = default)
     {
         try
         {
-            bool currentState = (_client as NamedPipeClient<FileSyncMessage>)?.IsConnected ?? false;
-
-            if (currentState != _isConnected)
-            {
-                UpdateConnectionState(currentState);
-                if (!currentState && !_isReconnecting)
-                {
-                    _ = StartReconnectionTask(_cancellationToken.Token);
-                }
-            }
+            await _client.SendMessageAsync(message);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "An error occurred while checking the connection");
+            _logger.LogError(e, "Failed to send a message");
         }
     }
     
-    private void UpdateConnectionState(bool isConnected, string? errorMessage = null)
-    {
-        if (_isConnected == isConnected)
-        {
-            return;
-        }
-        
-        _isConnected = isConnected;
-        ConnectionStateChanged?.Invoke(this, new ConnectionStatus(isConnected, errorMessage));
-    }
-
     public void Dispose()
     {
-        _connectionCheckTimer.Dispose();
-        _cancellationToken.Cancel();
-        _connectionLock.Dispose();
         if (_client is IDisposable disposable)
         {
             disposable.Dispose();
-        }
-        _cancellationToken.Dispose();
-    }
-
-    public class CommunicationException : Exception
-    {
-        public CommunicationException(string message, Exception? innerException = null) : base(message, innerException)
-        {
         }
     }
 }

@@ -8,15 +8,13 @@ public class FileSyncIPCServer : IDisposable
 {
     private const string PipeName = "S1FileSyncPipe";
     private readonly IIPCServer<FileSyncMessage> _server;
-    private readonly ILogger<FileSyncIPCServer> _logger;
     private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
     private bool _isConnected;
     private readonly CancellationTokenSource _cancellationToken = new CancellationTokenSource();
-    
-    #region 재시도 관련
 
-    private const int MaxRetryAttempts = 3;
-    private const int RetryDelayMs = 1000;
+    #region 의존 주입
+
+    private readonly ILogger<FileSyncIPCServer> _logger;
 
     #endregion
     
@@ -24,7 +22,12 @@ public class FileSyncIPCServer : IDisposable
     
     public FileSyncIPCServer(ILogger<FileSyncIPCServer> logger)
     {
+        #region 의존 주입
+
         _logger = logger;
+
+        #endregion
+        
         _server = new NamedPipeServer<FileSyncMessage>(PipeName);
         _server.MessageReceived += OnMessageReceived;
     }
@@ -58,39 +61,21 @@ public class FileSyncIPCServer : IDisposable
     
     public async Task SendMessageAsync(FileSyncMessage message, CancellationToken cancellationToken = default)
     {
-        int attempts = 0;
-        Exception? lastException = null;
-
-        while (attempts < MaxRetryAttempts)
+        try
         {
-            try
+            if (!_isConnected)
             {
-                if (!_isConnected)
-                {
-                    await RestartServerAsync(cancellationToken);
-                }
+                await RestartServerAsync(cancellationToken);
+            }
 
-                await _server.SendMessageAsync(message);
-                return;
-            }
-            catch (Exception e)
-            {
-                lastException = e;
-                _logger.LogWarning(e, "An error occurred while sending a message");
-                
-                attempts++;
-                if (attempts < MaxRetryAttempts)
-                {
-                    await Task.Delay(RetryDelayMs * attempts, cancellationToken);
-                }
-                
-                _isConnected = false;
-            }
+            await _server.SendMessageAsync(message);
         }
-        
-        // 재연결 실패
-        _logger.LogError(lastException, "Failed to send message to the IPC server");
-        throw new CommunicationException("Failed to send message to the IPC server", lastException);
+        catch (Exception e)
+        {
+            _logger.LogError(e, "An error occurred while sending a message");
+            _isConnected = false;
+            throw;
+        }
     }
 
     public void Dispose()
@@ -118,29 +103,23 @@ public class FileSyncIPCServer : IDisposable
 
     private async Task RestartServerAsync(CancellationToken cancellationToken)
     {
-        await _connectionLock.WaitAsync(cancellationToken);
+        if (_isConnected)
+        {
+            return;
+        }
+
         try
         {
-            if (_isConnected)
-            {
-                return;
-            }
-
+            _logger.LogInformation("Restarting the IPC server...");
             await _server.StopAsync();
             await Task.Delay(1000, cancellationToken);
             await StartAsync(cancellationToken);
+            _logger.LogInformation("IPC server restarted successfully");
         }
-        finally
+        catch (Exception e)
         {
-            _connectionLock.Release();
-        }
-    }
-    
-    public class CommunicationException : Exception
-    {
-        public CommunicationException(string message, Exception? innerException = null) 
-            : base(message, innerException)
-        {
+            _logger.LogError(e, "Failed to restart the IPC server");
+            throw;
         }
     }
 }
