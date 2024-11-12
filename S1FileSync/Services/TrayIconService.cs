@@ -7,11 +7,24 @@ using S1FileSync.Services.Interface;
 
 namespace S1FileSync.Services;
 
+/// <summary>
+/// 트레이아이콘 상태
+/// </summary>
 public enum TrayIconStatus
 {
     Normal,
     Syncing,
     Error
+}
+
+/// <summary>
+/// 트레이아이콘 색상
+/// </summary>
+public enum IconColor
+{
+    Normal,
+    Red,
+    Green
 }
 
 public class TrayIconService : ITrayIconService, IDisposable
@@ -21,6 +34,10 @@ public class TrayIconService : ITrayIconService, IDisposable
     private readonly DispatcherTimer _blinkTimer;
     private bool _isBlinking;
     private TrayIconStatus _currentStatus = TrayIconStatus.Normal;
+    private readonly IconColor _normalColor = IconColor.Normal;
+    private IconColor _currentColor = IconColor.Normal;
+    
+    private readonly Dictionary<IconColor, Icon> _iconCache = new Dictionary<IconColor, Icon>();
 
     public event EventHandler? WindowOpenRequested;
     public event EventHandler? ShutdownRequested;
@@ -37,6 +54,7 @@ public class TrayIconService : ITrayIconService, IDisposable
         if (File.Exists(iconPath))
         {
             _originalIcon = new Icon(iconPath);
+            PreGenerateIcons();
         }
         
         _notifyIcon = new NotifyIcon
@@ -62,7 +80,11 @@ public class TrayIconService : ITrayIconService, IDisposable
         _notifyIcon.ContextMenuStrip = contextMenu;
         _notifyIcon.DoubleClick += (sender, args) => WindowOpenRequested?.Invoke(sender, args);
     }
-    
+
+    /// <summary>
+    /// 상태 변경
+    /// </summary>
+    /// <param name="status"></param>
     public void SetStatus(TrayIconStatus status)
     {
         _currentStatus = status;
@@ -70,17 +92,15 @@ public class TrayIconService : ITrayIconService, IDisposable
         switch (status)
         {
             case TrayIconStatus.Normal:
-                StopBlinking();
-                UpdateIcon(false);
+                UpdateIcon(IconColor.Normal, false);
                 _notifyIcon!.Text = "S1FileSync - Ready";
                 break;
             case TrayIconStatus.Syncing:
-                StartBlinking();
+                UpdateIcon(IconColor.Green, true);
                 _notifyIcon!.Text = "S1FileSync - Syncronizing...";
                 break;
             case TrayIconStatus.Error:
-                StopBlinking();
-                UpdateIcon(true, true);
+                UpdateIcon(IconColor.Red, false);
                 _notifyIcon!.Text = "S1FileSync - Error";
                 break;
         }
@@ -90,8 +110,117 @@ public class TrayIconService : ITrayIconService, IDisposable
     {
         _notifyIcon?.Dispose();
         _originalIcon?.Dispose();
+        _blinkTimer?.Stop();
     }
     
+    /// <summary>
+    /// 각 색상 아이콘 생성
+    /// </summary>
+    private void PreGenerateIcons()
+    {
+        if (_originalIcon == null)
+        {
+            return;
+        }
+
+        _iconCache[IconColor.Normal] = (Icon)_originalIcon.Clone();
+
+        using var bitmap = new Bitmap(_originalIcon.ToBitmap());
+
+        foreach (IconColor color in Enum.GetValues<IconColor>())
+        {
+            if (color == IconColor.Normal)
+            {
+                continue;
+            }
+
+            using var coloredBitmap = new Bitmap(bitmap.Width, bitmap.Height);
+            using var graphics = Graphics.FromImage(coloredBitmap);
+            
+            for (int y = 0; y < bitmap.Height; y++)
+            {
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    Color pixelColor = bitmap.GetPixel(x, y);
+                    Color newColor = pixelColor;
+
+                    if (pixelColor.A == 0)
+                    {
+                        
+                    } 
+                    else if (pixelColor.R > 240 && pixelColor.G > 240 && pixelColor.B > 240)
+                    {
+                        
+                    }
+                    else 
+                    {
+                        int maxChannel = Math.Max(pixelColor.R, Math.Max(pixelColor.G, pixelColor.B));
+
+                        newColor = color switch
+                        {
+                            IconColor.Red => Color.FromArgb(
+                                pixelColor.A,
+                                Math.Min(255, (int)(maxChannel * 2.0)),
+                                Math.Min(255, (int)(maxChannel * 0.5)),
+                                Math.Min(255, (int)(maxChannel * 0.5))
+                            ),
+                            IconColor.Green => Color.FromArgb(
+                                pixelColor.A,
+                                27,
+                                140,
+                                60
+                            ),
+                            _ => pixelColor
+                        };
+                    }
+                
+                    coloredBitmap.SetPixel(x, y, newColor);
+                }
+            }
+            
+            _iconCache[color] = Icon.FromHandle(coloredBitmap.GetHicon());
+        }
+    }
+
+    /// <summary>
+    /// 아이콘 업데이트
+    /// </summary>
+    /// <param name="color">아이콘 색상</param>
+    /// <param name="enableBlinking">깜빡거림</param>
+    private void UpdateIcon(IconColor color, bool enableBlinking)
+    {
+        if (_notifyIcon == null) return;
+        
+        _currentColor = color;
+        
+        if (enableBlinking)
+        {
+            StartBlinking();
+        }
+        else
+        {
+            StopBlinking();
+            SetIconColor(color);
+        }
+    }
+
+    /// <summary>
+    /// 아이콘 색상 변경
+    /// </summary>
+    /// <param name="color"></param>
+    private void SetIconColor(IconColor color)
+    {
+        if (_notifyIcon == null || !_iconCache.ContainsKey(color))
+        {
+            return;
+        }
+        
+        _notifyIcon.Icon = _iconCache[color];
+    }
+    
+    /// <summary>
+    /// 아이콘 깜빡임 시작
+    /// </summary>
     private void StartBlinking()
     {
         if (!_blinkTimer.IsEnabled)
@@ -101,61 +230,24 @@ public class TrayIconService : ITrayIconService, IDisposable
         }
     }
     
+    /// <summary>
+    /// 아이콘 깜빡임 중지
+    /// </summary>
     private void StopBlinking()
     {
         _blinkTimer.Stop();
-        UpdateIcon(false);
+        _isBlinking = false;
     }
     
+    /// <summary>
+    /// 아이콘 깜빡임 타이머
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private void BlinkTimer_Tick(object? sender, EventArgs e)
     {
         _isBlinking = !_isBlinking;
-        UpdateIcon(_isBlinking);
+        SetIconColor(_isBlinking ? _currentColor : _normalColor);
     }
 
-    private void UpdateIcon(bool highlight, bool isError = false)
-    {
-        if (_originalIcon == null || _notifyIcon == null)
-        {
-            return;
-        }
-
-        using (var bitmap = new Bitmap(_originalIcon.ToBitmap()))
-        {
-            if (highlight || isError)
-            {
-                using (var graphics = Graphics.FromImage(bitmap))
-                {
-                    var colorMatrix = new ColorMatrix();
-
-                    if (isError)
-                    {
-                        colorMatrix.Matrix00 = 1.5f; // R
-                        colorMatrix.Matrix11 = 0.5f; // G
-                        colorMatrix.Matrix22 = 0.5f; // B
-                    }
-                    else
-                    {
-                        colorMatrix.Matrix00 = 0.5f; // R
-                        colorMatrix.Matrix11 = 1.5f; // G
-                        colorMatrix.Matrix22 = 0.5f; // B
-                    }
-                    
-                    var imageAttributes = new ImageAttributes();
-                    imageAttributes.SetColorMatrix(colorMatrix);
-                    
-                    graphics.DrawImage(bitmap,
-                        new Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                        0, 0, bitmap.Width, bitmap.Height,
-                        GraphicsUnit.Pixel,
-                        imageAttributes);
-                }
-            }
-            
-            using (var icon = Icon.FromHandle(bitmap.GetHicon()))
-            {
-                _notifyIcon.Icon = icon;
-            }
-        }
-    }
 }
