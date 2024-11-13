@@ -4,52 +4,124 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:S1FileSync.Views"
-             xmlns:converters="clr-namespace:S1FileSync.Converters"
              xmlns:model="clr-namespace:S1FileSync.ViewModels"
+             xmlns:converters="clr-namespace:S1FileSync.Converters"
              d:DataContext="{d:DesignInstance Type=model:FileSyncProgressViewModel}"
              mc:Ignorable="d">
-    <Grid>
-        <ListView ItemsSource="{Binding SyncItems}">
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2"/>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="2*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <!-- 파일명 -->
-                        <TextBlock Grid.Column="0" 
-                                   Text="{Binding FileName}" 
-                                   VerticalAlignment="Center"/>
-                        <!-- 파일 크기 -->
-                        <TextBlock Grid.Column="1" 
-                                   Text="{Binding FileSizeFormatted}" 
-                                   VerticalAlignment="Center"/>
-                        
-                        <!-- 동기화 속도 -->
-                        <TextBlock Grid.Column="2" 
-                                   Text="{Binding SyncSpeedFormatted}" 
-                                   VerticalAlignment="Center"
-                                   Margin="10,0"
-                                   Visibility="{Binding IsCompleted, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                        
-                        <!-- 동기화 진행 상태 -->
-                        <Grid Grid.Column="3" Margin="10,0">
-                            <ProgressBar Value="{Binding Progress}"
-                                         Maximum="100"
-                                         Height="20"
-                                         Visibility="{Binding IsCompleted, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                            <TextBlock Text="Completed"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Visibility="{Binding IsCompleted, Converter={StaticResource BoolToVisibilityConverter}}"/>
+    <UserControl.Resources>
+        <Style x:Key="ProgressCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderColor}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        
+        <Style x:Key="ProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="Background" Value="{DynamicResource ProgressBarBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="2"/>
+                            <Border x:Name="PART_Track"
+                                    Background="{TemplateBinding Foreground}"
+                                    CornerRadius="2"
+                                    HorizontalAlignment="Left">
+                                <Border.Width>
+                                    <MultiBinding>
+                                        <MultiBinding.Converter>
+                                            <converters:ProgressWidthConverter/>
+                                        </MultiBinding.Converter>
+                                        <Binding Path="Value" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="Maximum" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </Border.Width>
+                            </Border>
                         </Grid>
-                    </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding SyncItems}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource ProgressCardStyle}"
+                            Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- FileIcon -->
+                            <Border Grid.Column="0"
+                                    Width="40" Height="40"
+                                    Background="{DynamicResource IconBackground}"
+                                    CornerRadius="8"
+                                    Margin="0,0,16,0">
+                                <Viewbox Stretch="Uniform">
+                                    <Canvas Width="20" Height="20">
+                                        <Path Fill="{DynamicResource IconBackground}" 
+                                              Stroke="{DynamicResource IconForeground}" 
+                                              StrokeThickness="2"
+                                              Data="M45,64 H10 C7.8,64 6,62.2 6,60 V4 C6,1.8 7.8,0 10,0 H45 L58,13 V60 C58,62.2 56.2,64 54,64 Z"/>
+                                        <!-- 산 모양 -->
+                                        <Path Fill="#A0A0A0" 
+                                              Data="M20,45 L28,37 L32,41 L40,33 L44,37 V45 Z"/>
+                                        <!-- 태양 모양 -->
+                                        <Path Fill="#A0A0A0" 
+                                              Data="M38,30 A2,2 0 1 1 38,28 A2,2 0 1 1 38,30"/>
+                                        <!-- 이미지 표시를 위한 내부 사각형 -->
+                                        <Path Fill="{DynamicResource IconBackground}" 
+                                              Stroke="{DynamicResource IconForeground}" 
+                                              StrokeThickness="1"
+                                              Data="M20,25 H44 V45 H20 Z"/>
+                                        <!-- 파일 모서리 접힌 부분 -->
+                                        <Path Fill="{DynamicResource IconBackground}" 
+                                              Stroke="{DynamicResource IconForeground}" 
+                                              StrokeThickness="2"
+                                              Data="M45,0 V13 H58"/>
+                                    </Canvas>
+                                </Viewbox>
+                            </Border>
+
+                            
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <!-- FileInfo -->
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="{Binding FileName}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource PrimaryTextColor}"/>
+                                    <TextBlock Text="{Binding FileSizeFormatted}"
+                                               HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource SecondaryTextColor}"/>
+                                </Grid>
+                                <!-- Progressbar -->
+                                <Grid>
+                                    <ProgressBar Style="{StaticResource ProgressBarStyle}"
+                                                 Value="{Binding Progress}"
+                                                 Maximum="100"
+                                                 Visibility="{Binding IsCompleted, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                    <TextBlock Text="{Binding SyncSpeedFormatted}"
+                                               FontSize="12"
+                                               Margin="0,8,0,0"
+                                               Foreground="{DynamicResource SecondaryTextColor}"
+                                               Visibility="{Binding IsCompleted, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
-    </Grid>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
 </UserControl>

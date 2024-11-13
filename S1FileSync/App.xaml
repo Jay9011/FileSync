@@ -5,12 +5,12 @@
              xmlns:converters="clr-namespace:S1FileSync.Converters">
     <Application.Resources>
         <ResourceDictionary>
-            <Style x:Key="DefaultComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
-                <Setter Property="HorizontalAlignment" Value="Left"></Setter>
-                <Setter Property="VerticalAlignment" Value="Center"></Setter>
-            </Style>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/Views/Theme/LightTheme.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Views/Theme/DarkTheme.xaml"/>
 
-            <Style TargetType="{x:Type ComboBoxItem}" BasedOn="{StaticResource DefaultComboBoxItemStyle}"></Style>
+                <ResourceDictionary Source="/Views/Styles/ButtonStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
             
             <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
             <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>

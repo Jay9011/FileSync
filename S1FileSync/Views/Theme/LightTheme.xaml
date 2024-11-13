@@ -1,0 +1,29 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="PrimaryColorValue">#4f46e5</Color>
+    <SolidColorBrush x:Key="PrimaryColor" Color="{StaticResource PrimaryColorValue}"/>
+
+    <Color x:Key="PrimaryColorHoverValue">#4338ca</Color>
+    <SolidColorBrush x:Key="PrimaryColorHover" Color="{StaticResource PrimaryColorHoverValue}"/>
+
+    <SolidColorBrush x:Key="MainBackground" Color="#ffffff"/>
+    <SolidColorBrush x:Key="SidebarBackground" Color="#f3f4f6"/>
+
+    <Color x:Key="PrimaryTextColorValue">#000000</Color>
+    <SolidColorBrush x:Key="PrimaryTextColor" Color="{StaticResource PrimaryTextColorValue}"/>
+
+    <Color x:Key="SecondaryTextColorValue">#666666</Color>
+    <SolidColorBrush x:Key="SecondaryTextColor" Color="{StaticResource SecondaryTextColorValue}"/>
+
+    <SolidColorBrush x:Key="HoverColor" Color="#e5e7eb"/>
+    <SolidColorBrush x:Key="PressedColor" Color="#d1d5db"/>
+    <SolidColorBrush x:Key="BorderColor" Color="#e5e7eb"/>
+
+    <!-- FileSyncProgress -->
+    <SolidColorBrush x:Key="CardBackground" Color="#ffffff"/>
+    <SolidColorBrush x:Key="CardBorderColor" Color="#e5e7eb"/>
+    <SolidColorBrush x:Key="IconBackground" Color="#f3f4f6"/>
+    <SolidColorBrush x:Key="IconForeground" Color="#6b7280"/>
+    <SolidColorBrush x:Key="InputBackground" Color="#ffffff"/>
+    <SolidColorBrush x:Key="ProgressBarBackground" Color="#e5e7eb"/>
+</ResourceDictionary>

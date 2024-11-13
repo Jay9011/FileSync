@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- 배경 원 -->
+  <circle cx="128" cy="128" r="120" fill="#2196F3"/>
+  
+  <!-- 동기화 화살표 -->
+  <path d="M128 48 C80 48 40 88 40 136 L56 136 L28 176 L0 136 L16 136 C16 75 66 24 128 24 L128 48" fill="white"/>
+  <path d="M128 208 C176 208 216 168 216 120 L200 120 L228 80 L256 120 L240 120 C240 181 190 232 128 232 L128 208" fill="white"/>
+  
+  <!-- 파일 아이콘 -->
+  <rect x="96" y="96" width="64" height="64" rx="8" fill="white"/>
+  <rect x="108" y="108" width="40" height="6" rx="2" fill="#2196F3"/>
+  <rect x="108" y="120" width="40" height="6" rx="2" fill="#2196F3"/>
+  <rect x="108" y="132" width="40" height="6" rx="2" fill="#2196F3"/>
+</svg>

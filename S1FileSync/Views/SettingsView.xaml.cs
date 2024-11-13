@@ -5,7 +5,7 @@ using S1FileSync.ViewModels;
 
 namespace S1FileSync.Views
 {
-    public partial class SettingsView : Page
+    public partial class SettingsView : UserControl
     {
         #region 의존 주입
 

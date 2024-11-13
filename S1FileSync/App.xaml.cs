@@ -76,6 +76,7 @@ namespace S1FileSync
 
             // Views
             services.AddSingleton<FileSyncProgressView>();
+            services.AddSingleton<SyncMonitorView>();
             services.AddSingleton<SettingsView>();
             services.AddSingleton<MainWindow>();
 

@@ -5,6 +5,7 @@ using System.Windows.Input;
 using S1FileSync.Helpers;
 using S1FileSync.Services;
 using S1FileSync.Services.Interface;
+using S1FileSync.Views;
 
 namespace S1FileSync.ViewModels;
 
@@ -12,11 +13,22 @@ public class MainViewModel : ViewModelBase
 {
     #region 의존 주입
 
+    public SyncMonitorView MonitorView { get; set; }
+    public SettingsView SettingsView { get; set; }
+    public FileSyncProgressViewModel ProgressViewModel { get; set; }
+    
     private readonly IServiceControlService _serviceControlService;
     private readonly IPopupService _popupService;
     private readonly FileSyncIPCClient _ipcClient;
 
     #endregion
+    
+    private bool _isDarkTheme = true;
+    public bool IsDarkTheme
+    {
+        get => _isDarkTheme;
+        set => SetField(ref _isDarkTheme, value);
+    }
     
     private bool _isServiceRunning;
     public bool IsServiceRunning
@@ -42,6 +54,7 @@ public class MainViewModel : ViewModelBase
     public ICommand StartSyncCommand { get; set; }
     public ICommand StopSyncCommand { get; set; }
     public ICommand CheckStatusCommand { get; set; }
+    
 
     public MainViewModel(IServiceControlService serviceControlService, IPopupService popupService, FileSyncIPCClient ipcClient)
     {
