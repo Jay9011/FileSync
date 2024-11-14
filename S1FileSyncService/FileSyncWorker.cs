@@ -1,3 +1,4 @@
+using NetConnectionHelper.Interface;
 using S1FileSync.Models;
 using S1FileSync.Services;
 using S1FileSync.Services.Interface;
@@ -22,7 +23,7 @@ namespace S1FileSyncService
         private readonly TimeSpan _settingsCheckInterval = TimeSpan.FromSeconds(3);
 
 #if DEBUG
-        private readonly TimeSpan _iconUpdateInterval = TimeSpan.FromSeconds(5);
+        private readonly TimeSpan _iconUpdateInterval = TimeSpan.FromSeconds(3);
 #endif
         
 
@@ -53,14 +54,11 @@ namespace S1FileSyncService
 #if DEBUG
                 using var iconUpdateTimer = new PeriodicTimer(_iconUpdateInterval);
 #endif
-
                 // 모든 비동기 작업이 완료될 때까지 대기 (각 작업은 PeriodicTimer를 통해 별도의 타이머로 실행)
-#if !DEBUG
                 await Task.WhenAll(
                     RunFileSyncLoop(syncTimer, _cancellationTokenSource.Token),
                     RunSettingsCheckLoop(settingsCheckTimer, _cancellationTokenSource.Token)
                 );
-#endif
 #if DEBUG
                 await Task.WhenAll(
                     RunUpdateTestLoop(iconUpdateTimer, _cancellationTokenSource.Token)
@@ -126,8 +124,11 @@ namespace S1FileSyncService
                     {
                         var newSettings = _settingsService.LoadSettings();
 
-                        // TODO: 설정 검증
-                        
+                        var (isConnected, message) = await _fileSync.TestConnection();
+                        var connectionStatus = isConnected ? "Connected" : message;
+
+                        var remoteServerMessage = new FileSyncMessage(FileSyncMessageType.ConnectionStatus, connectionStatus);
+                        await _ipcServer.SendMessageAsync(remoteServerMessage, stoppingToken);
                         
                         _logger.LogInformation($"{processPrefix}{statusMessage} at: {DateTimeOffset.Now}");
                     }

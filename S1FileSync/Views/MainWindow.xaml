@@ -21,9 +21,9 @@
         <ResourceDictionary>
             <Storyboard x:Key="SidebarExpandAnimation">
                 <DoubleAnimation
-                    Storyboard.TargetName="SidebarColumn"
+                    Storyboard.TargetName="SidebarBorder"
                     Storyboard.TargetProperty="Width"
-                    To="240"
+                    To="{x:Static model:MainViewModel.SidebarExpandedWidth}"
                     Duration="0:0:0.3">
                     <DoubleAnimation.EasingFunction>
                         <CubicEase EasingMode="EaseOut"/>
@@ -39,9 +39,9 @@
 
             <Storyboard x:Key="SidebarCollapseAnimation">
                 <DoubleAnimation
-                    Storyboard.TargetName="SidebarColumn"
+                    Storyboard.TargetName="SidebarBorder"
                     Storyboard.TargetProperty="Width"
-                    To="60"
+                    To="{x:Static model:MainViewModel.SidebarCollapsedWidth}"
                     Duration="0:0:0.3">
                     <DoubleAnimation.EasingFunction>
                         <CubicEase EasingMode="EaseOut"/>
@@ -64,17 +64,21 @@
                                         Padding="16,12">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="{x:Static model:MainViewModel.SidebarIconColumnWidth}"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <ContentPresenter x:Name="Icon"
                                                           Grid.Column="0"
-                                                          Content="{TemplateBinding Tag}"/>
+                                                          Content="{TemplateBinding Tag}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center">
+                                        </ContentPresenter>
                                         <TextBlock x:Name="NavButtonText"
                                                    Grid.Column="1"
                                                    Text="{TemplateBinding Content}"
                                                    Margin="12,0,0,0"
-                                                   VerticalAlignment="Center"/>
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource SecondaryColor}"/>
                                     </Grid>
                                 </Border>
                             </Grid>
@@ -85,26 +89,45 @@
                                             Value="{DynamicResource PrimaryColor}"/>
                                     <Setter TargetName="NavButtonText"
                                             Property="Foreground"
-                                            Value="{DynamicResource PrimaryTextColor}"/>
+                                            Value="{DynamicResource PrimaryButtonTextColor}"/>
                                 </Trigger>
-                                <Trigger Property="IsMouseOver" Value="True">
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsMouseOver" Value="True"/>
+                                        <Condition Property="IsChecked" Value="False"/>
+                                    </MultiTrigger.Conditions>
                                     <Setter TargetName="NavButtonBorder"
                                             Property="Background"
                                             Value="{DynamicResource HoverColor}"/>
-                                </Trigger>
+                                </MultiTrigger>
+                                
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
+                <Style.Resources>
+                    <Style TargetType="Path">
+                        <Setter Property="Stroke" Value="{DynamicResource SecondaryTextColor}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=RadioButton}}" Value="True">
+                                <Setter Property="Stroke" Value="{DynamicResource PrimaryButtonTextColor}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Style.Resources>
             </Style>
 
             <Style x:Key="ThemeToggleButton" TargetType="ToggleButton">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ToggleButton">
-                            <Border Background="Transparent"
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
                                     Padding="8"
-                                    CornerRadius="4">
+                                    CornerRadius="4"
+                                    Cursor="Hand">
                                 <Grid>
                                     <!-- Sun Icon -->
                                     <Path x:Name="SunIcon"
@@ -113,38 +136,18 @@
                                           StrokeThickness="2"
                                           StrokeLineJoin="Miter"
                                           StrokeStartLineCap="Round"
+                                          Fill="{DynamicResource PrimaryTextColor}"
+                                          Stroke="{DynamicResource PrimaryTextColor}"
                                           Data="m 12,1 v 2 m 0,18 v 2 M 4.22,4.22 5.64,5.64 m 12.72,12.72 1.42,1.42 M 1,12 h 2 m 18,0 h 2 M 4.22,19.78 5.64,18.36 M 18.36,5.64 19.78,4.22 M 12,6 c -3.3137085,0 -6,2.6862915 -6,6 0,3.313708 2.6862915,6 6,6 3.313708,0 6,-2.686292 6,-6 0,-3.3137085 -2.686292,-6 -6,-6 z">
-                                        <Path.Fill>
-                                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                                <GradientStop Color="{DynamicResource PrimaryTextColorValue}" Offset="0.63" />
-                                                <GradientStop Color="Transparent" Offset="1" />
-                                            </LinearGradientBrush>
-                                        </Path.Fill>
-                                        <Path.Stroke>
-                                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                                <GradientStop Color="{DynamicResource PrimaryTextColorValue}" Offset="0.63" />
-                                                <GradientStop Color="Transparent" Offset="1" />
-                                            </LinearGradientBrush>
-                                        </Path.Stroke>
                                     </Path>
 
                                     <!-- Moon Icon -->
                                     <Path x:Name="MoonIcon"
                                           Width="24" Height="24"
                                           Visibility="Collapsed"
+                                          Fill="{DynamicResource PrimaryTextColor}"
+                                          Stroke="{DynamicResource PrimaryTextColor}"
                                           Data="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z">
-                                        <Path.Fill>
-                                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                                <GradientStop Color="{DynamicResource PrimaryTextColorValue}" Offset="0.63" />
-                                                <GradientStop Color="Transparent" Offset="1" />
-                                            </LinearGradientBrush>
-                                        </Path.Fill>
-                                        <Path.Stroke>
-                                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                                <GradientStop Color="{DynamicResource PrimaryTextColorValue}" Offset="0.63" />
-                                                <GradientStop Color="Transparent" Offset="1" />
-                                            </LinearGradientBrush>
-                                        </Path.Stroke>
                                     </Path>
                                 </Grid>
                             </Border>
@@ -165,6 +168,12 @@
                                             Property="Visibility"
                                             Value="Collapsed"/>
                                 </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource HoverColor}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource PressedColor}"/>
+                                </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -174,7 +183,7 @@
             <Style x:Key="IconButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="8"/>
+                <Setter Property="Padding" Value="2"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -208,12 +217,21 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="SidebarColumn" Width="240"/>
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Top Menu -->
-        <Menu Grid.Row="0" Grid.ColumnSpan="2">
+        <Menu Grid.Row="0" Grid.ColumnSpan="2"
+              Style="{DynamicResource BaseMenuStyle}">
+            <Menu.Resources>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource MainMenuItemStyle}">
+                    <Style.Resources>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource SubMenuItemStyle}"/>
+                    </Style.Resources>
+                </Style>
+            </Menu.Resources>
+
             <MenuItem Header="File">
                 <MenuItem Header="Exit" Click="ExitMenuItem_Click"/>
             </MenuItem>
@@ -234,7 +252,9 @@
         </Menu>
 
         <!-- Sidebar -->
-        <Border Grid.Row="1" Grid.Column="0"
+        <Border x:Name="SidebarBorder"
+                Grid.Row="1" Grid.Column="0"
+                Width="{x:Static model:MainViewModel.SidebarExpandedWidth}"
                 Background="{DynamicResource SidebarBackground}">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" Margin="16,16,16,32">
@@ -247,10 +267,14 @@
                     <Button x:Name="ToggleSidebarButton"
                             Click="ToggleSidebarClick"
                             Style="{StaticResource IconButtonStyle}">
-                        <Path Width="24" Height="24"
-                              Stroke="{DynamicResource PrimaryTextColor}"
-                              StrokeThickness="2"
-                              Data="M3 12h18M3 6h18M3 18h18"/>
+                        <Viewbox Width="24" Height="24" Stretch="Uniform">
+                            <Canvas Width="21" Height="24">
+                                <Path Stroke="{DynamicResource PrimaryTextColor}"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      Data="M3 12h18M3 6h18M3 18h18"/>
+                            </Canvas>
+                        </Viewbox>
                     </Button>
 
                     <TextBlock Grid.Column="1"
@@ -275,12 +299,14 @@
                                  GroupName="Navigation">
                         <RadioButton.Tag>
                             <!-- Sync 아이콘 -->
-                            <Path Width="20" Height="20"
-                                  Stroke="{DynamicResource PrimaryTextColor}"
-                                  StrokeThickness="2"
-                                  StrokeStartLineCap="Round"
-                                  StrokeLineJoin="Round"
-                                  Data="M21.5 2v6h-6M2.5 22v-6h6M2 12c0-4.97 4.03-9 9-9 2.39 0 4.68.94 6.37 2.63L21.5 8M2.5 16L6.63 19.37C8.32 21.06 10.61 22 13 22c4.97 0 9-4.03 9-9"/>
+                            <Viewbox Width="20" Height="20" Stretch="Uniform">
+                                <Canvas Width="24" Height="24">
+                                    <Path StrokeThickness="2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Data="M21.5 2v6h-6M2.5 22v-6h6M2 12c0-4.97 4.03-9 9-9 2.39 0 4.68.94 6.37 2.63L21.5 8M2.5 16L6.63 19.37C8.32 21.06 10.61 22 13 22c4.97 0 9-4.03 9-9"/>
+                                </Canvas>
+                            </Viewbox>
                         </RadioButton.Tag>
                     </RadioButton>
 
@@ -290,12 +316,14 @@
                                  GroupName="Navigation">
                         <RadioButton.Tag>
                             <!-- Setting 아이콘 -->
-                            <Path Width="20" Height="20"
-                                  Stroke="{DynamicResource PrimaryTextColor}"
-                                  StrokeThickness="2"
-                                  StrokeStartLineCap="Round"
-                                  StrokeLineJoin="Round"
-                                  Data="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+                            <Viewbox Width="20" Height="20" Stretch="Uniform">
+                                <Canvas Width="24" Height="24">
+                                    <Path StrokeThickness="2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Data="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" Cursor=""/>
+                                </Canvas>
+                            </Viewbox>
                         </RadioButton.Tag>
                     </RadioButton>
                 </StackPanel>

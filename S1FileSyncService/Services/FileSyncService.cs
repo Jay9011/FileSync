@@ -19,6 +19,7 @@ public class FileSyncService : IFileSync
     private readonly ISettingsService _settingsService;
     private readonly IRemoteConnectionHelper _connectionHelper;
     private readonly ISyncProgressWithUI _syncProgressUI;
+    private readonly FileSyncIPCServer _ipcServer;
 
     #endregion
 
@@ -37,7 +38,7 @@ public class FileSyncService : IFileSync
 
     #endregion
     
-    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, ISyncProgressWithUI syncProgressUi)
+    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, ISyncProgressWithUI syncProgressUi, FileSyncIPCServer ipcServer)
     {
         #region 의존 주입
         
@@ -45,6 +46,7 @@ public class FileSyncService : IFileSync
         _settingsService = settingsService;
         _connectionHelper = connectionHelper;
         _syncProgressUI = syncProgressUi;
+        _ipcServer = ipcServer;
 
         #endregion
     }
@@ -63,18 +65,38 @@ public class FileSyncService : IFileSync
                 _logger.LogError(message);
                 return;
             }
-            
-            // _trayIconService.SetStatus(TrayIconStatus.Syncing);
+
+            try
+            {
+                await _ipcServer.SendMessageAsync(new FileSyncMessage(FileSyncMessageType.StatusChange, TrayIconStatus.Syncing.ToString()));
+            }
+            catch (Exception)
+            {
+            }
             
             await SyncDirectory(settings.LocalLocation, remoteUncPath);
-            
-            // _trayIconService.SetStatus(TrayIconStatus.Normal);
+
+            try
+            {
+                await _ipcServer.SendMessageAsync(new FileSyncMessage(FileSyncMessageType.StatusChange, TrayIconStatus.Normal.ToString()));
+            }
+            catch (Exception)
+            {
+            }
         }
         catch (Exception e)
         {
             _logger.LogError(e, "파일 동기화 중 오류가 발생했습니다.");
-            // _trayIconService.SetStatus(TrayIconStatus.Error);
+            await _ipcServer.SendMessageAsync(new FileSyncMessage(FileSyncMessageType.StatusChange, TrayIconStatus.Error.ToString()));
         }
+    }
+
+    public Task<(bool, string)> TestConnection()
+    {
+        var settings = _settingsService.LoadSettings();
+        string remoteUncPath = _connectionHelper.GetRightPath(settings.RemoteLocation);
+        
+        return _connectionHelper.ConnectionAsync(remoteUncPath, settings.Username, settings.Password);
     }
 
     /// <summary>

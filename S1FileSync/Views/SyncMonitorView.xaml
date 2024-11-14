@@ -8,7 +8,16 @@
              d:DataContext="{d:DesignInstance Type=model:MainViewModel}"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
-    <DockPanel LastChildFill="True">
+    <UserControl.Resources>
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="24"/>
+        </Style>
+    </UserControl.Resources>
+    <DockPanel>
         <Border DockPanel.Dock="Top"
                 Style="{StaticResource CardStyle}"
                 Margin="0,0,0,24">
@@ -33,9 +42,19 @@
                             Background="{DynamicResource HoverColor}"
                             CornerRadius="16"
                             Padding="12,6">
-                        <TextBlock Text="{Binding ServiceStatus}"
-                                   FontSize="14"
-                                   Foreground="{DynamicResource SecondaryTextColor}"/>
+                        <TextBlock Text="{Binding ConnectionStatus}"
+                                   FontSize="14">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextColor}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource GreenColor}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Border>
                 </Grid>
 
@@ -45,29 +64,34 @@
             </Grid>
         </Border>
 
-        <ContentControl DockPanel.Dock="Top"
-                        Content="{Binding ProgressView}"/>
-
-        <Grid DockPanel.Dock="Bottom"
-              Margin="0,16,0,0">
+        <Border DockPanel.Dock="Bottom"
+                Margin="0,16,0,0"
+                Padding="5">
             <StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        Margin="0,0,0,10">
-                <StackPanel.Resources>
-                    <Style TargetType="Button">
-                        <Setter Property="Margin" Value="5"/>
-                    </Style>
-                </StackPanel.Resources>
-
+                        HorizontalAlignment="Right">
                 <Button Content="Stop Sync"
                         Command="{Binding StopSyncCommand}"
                         Style="{StaticResource OutlineButtonStyle}"
+                        Margin="0,0,15,0"
                         IsEnabled="{Binding IsServiceRunning}"/>
                 <Button Content="Start Sync"
                         Command="{Binding StartSyncCommand}"
                         Style="{StaticResource PrimaryButtonStyle}"
                         IsEnabled="{Binding IsServiceRunning, Converter={StaticResource InverseBoolConverter}}"/>
             </StackPanel>
-        </Grid>
+        </Border>
+
+        <ContentControl Content="{Binding ProgressView}">
+            <ContentControl.Template>
+                <ControlTemplate TargetType="ContentControl">
+                    <Border>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Style="{StaticResource CustomScrollViewerStyle}">
+                            <ContentPresenter/>
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </ContentControl.Template>
+        </ContentControl>
     </DockPanel>
 </UserControl>

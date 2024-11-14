@@ -8,130 +8,32 @@
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800"
              d:DataContext="{d:DesignInstance Type=model:SettingsViewModel}">
-    <UserControl.Resources>
-        <Style x:Key="SettingsSectionStyle" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource SidebarBackground}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="Margin" Value="0,0,0,24"/>
-        </Style>
-
-        <Style x:Key="SettingsHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="18"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextColor}"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
-        </Style>
-
-        <Style x:Key="FormGroupStyle" TargetType="StackPanel">
-            <Setter Property="Margin" Value="0,0,0,20"/>
-        </Style>
-
-        <Style x:Key="FormLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextColor}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextColor}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
-                </Trigger>
-                <Trigger Property="IsFocused" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="ModernPasswordBoxStyle" TargetType="PasswordBox">
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextColor}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
-                </Trigger>
-                <Trigger Property="IsFocused" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextColor}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-
-        <Style x:Key="ActionButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Padding" Value="20,0"/>
-            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource PrimaryColorHover}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </UserControl.Resources>
-
-    <ScrollViewer>
+    <ScrollViewer Style="{StaticResource CustomScrollViewerStyle}">
         <StackPanel Margin="24">
-            <Border Style="{StaticResource SettingsSectionStyle}">
+            <Border Style="{StaticResource SectionStyle}">
                 <StackPanel>
                     <TextBlock Text="Connection Settings"
-                               Style="{StaticResource SettingsHeaderStyle}"/>
+                               Style="{StaticResource HeaderTextStyle}"/>
 
                     <StackPanel Style="{StaticResource FormGroupStyle}">
                         <TextBlock Text="Remote Location"
-                                   Style="{StaticResource FormLabelStyle}"/>
+                                   Style="{StaticResource FormLabelTextStyle}"/>
                         <TextBox Text="{Binding Settings.RemoteLocation}"
-                                 Style="{StaticResource ModernTextBoxStyle}"/>
+                                 Style="{StaticResource TextBoxStyle}"/>
                     </StackPanel>
 
                     <StackPanel Style="{StaticResource FormGroupStyle}">
                         <TextBlock Text="Username"
-                                   Style="{StaticResource FormLabelStyle}"/>
+                                   Style="{StaticResource FormLabelTextStyle}"/>
                         <TextBox Text="{Binding Settings.Username}"
-                                 Style="{StaticResource ModernTextBoxStyle}"/>
+                                 Style="{StaticResource TextBoxStyle}"/>
                     </StackPanel>
 
                     <StackPanel Style="{StaticResource FormGroupStyle}">
                         <TextBlock Text="Password"
-                                   Style="{StaticResource FormLabelStyle}"/>
+                                   Style="{StaticResource FormLabelTextStyle}"/>
                         <PasswordBox x:Name="PasswordBox"
-                                     Style="{StaticResource ModernPasswordBoxStyle}"/>
+                                     Style="{StaticResource PasswordBoxStyle}"/>
                     </StackPanel>
 
                     <Button Content="Test Connection"
@@ -145,71 +47,69 @@
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource SettingsSectionStyle}">
+            <Border Style="{StaticResource SectionStyle}">
                 <StackPanel>
                     <TextBlock Text="Synchronization Settings"
-                             Style="{StaticResource SettingsHeaderStyle}"/>
+                             Style="{StaticResource HeaderTextStyle}"/>
 
                     <StackPanel Style="{StaticResource FormGroupStyle}">
                         <TextBlock Text="Local Location"
-                                 Style="{StaticResource FormLabelStyle}"/>
+                                 Style="{StaticResource FormLabelTextStyle}"/>
                         <TextBox Text="{Binding Settings.LocalLocation}"
-                                Style="{StaticResource ModernTextBoxStyle}"/>
+                                Style="{StaticResource TextBoxStyle}"/>
                     </StackPanel>
 
                     <StackPanel Style="{StaticResource FormGroupStyle}">
                         <TextBlock Text="Folder Pattern"
-                                 Style="{StaticResource FormLabelStyle}"/>
+                                 Style="{StaticResource FormLabelTextStyle}"/>
                         <TextBox Text="{Binding Settings.FolderPattern}"
-                                Style="{StaticResource ModernTextBoxStyle}"/>
+                                Style="{StaticResource TextBoxStyle}"/>
                     </StackPanel>
 
                     <StackPanel Style="{StaticResource FormGroupStyle}">
                         <TextBlock Text="File Extensions"
-                                 Style="{StaticResource FormLabelStyle}"/>
+                                 Style="{StaticResource FormLabelTextStyle}"/>
                         <TextBox Text="{Binding Settings.FileExtensions}"
-                                Style="{StaticResource ModernTextBoxStyle}"/>
+                                Style="{StaticResource TextBoxStyle}"/>
                     </StackPanel>
 
                     <StackPanel Style="{StaticResource FormGroupStyle}">
                         <TextBlock Text="Sync Interval"
-                                 Style="{StaticResource FormLabelStyle}"/>
+                                 Style="{StaticResource FormLabelTextStyle}"/>
                         <TextBox Text="{Binding SyncIntervalString}"
-                                Style="{StaticResource ModernTextBoxStyle}"/>
+                                Style="{StaticResource TextBoxStyle}"/>
                     </StackPanel>
 
                     <StackPanel Style="{StaticResource FormGroupStyle}">
                         <TextBlock Text="Folder Structure"
-                                 Style="{StaticResource FormLabelStyle}"/>
+                                 Style="{StaticResource FormLabelTextStyle}"/>
                         <ComboBox ItemsSource="{Binding FolderStructureOptions}"
                                 SelectedValue="{Binding Settings.UseFlatStructure}"
                                 DisplayMemberPath="DisplayText"
                                 SelectedValuePath="Value"
-                                Style="{StaticResource ModernComboBoxStyle}"/>
+                                Style="{StaticResource ComboBoxStyle}"/>
                     </StackPanel>
 
                     <StackPanel Style="{StaticResource FormGroupStyle}">
                         <TextBlock Text="Duplicate Handling"
-                                 Style="{StaticResource FormLabelStyle}"/>
+                                 Style="{StaticResource FormLabelTextStyle}"/>
                         <ComboBox ItemsSource="{Binding DuplicateHandlingOptions}"
                                 SelectedValue="{Binding Settings.DuplicateHandling}"
                                 DisplayMemberPath="DisplayText"
                                 SelectedValuePath="Value"
-                                Style="{StaticResource ModernComboBoxStyle}"/>
+                                Style="{StaticResource ComboBoxStyle}"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
 
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
-                        Margin="0,8,0,0">
+                        Margin="0,8,0,0" Cursor="">
                 <Button Content="Save Settings"
                         Command="{Binding SaveSettingsCommand}"
                         Style="{StaticResource ActionButtonStyle}"
-                        Margin="0,0,12,0"/>
-                <Button Content="Sync Settings"
-                        Command="{Binding SyncSettingsCommand}"
-                        Style="{StaticResource ActionButtonStyle}"/>
+                        Margin="0,0,12,0"
+                        Cursor="Hand"/>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

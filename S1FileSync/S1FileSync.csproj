@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <Authors>Jay9011</Authors>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <GenerateTemporaryAssembly>true</GenerateTemporaryAssembly>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,14 +34,15 @@
       <XamlRuntime>Wpf</XamlRuntime>
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="Views\Styles\ButtonStyles.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <Page Update="Views\Styles\*.xaml">
+	  <Generator>MSBuild:Compile</Generator>
+	  <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Page>
-    <Page Update="Views\Theme\DarkTheme.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Page>
-    <Page Update="Views\Theme\LightTheme.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <Page Update="Views\Theme\*.xaml">
+	  <Generator>MSBuild:Compile</Generator>
+	  <SubType>Designer</SubType>
+	  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Page>
   </ItemGroup>
 

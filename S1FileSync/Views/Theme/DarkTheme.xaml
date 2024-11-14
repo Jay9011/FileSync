@@ -6,6 +6,9 @@
     <Color x:Key="PrimaryColorHoverValue">#4338ca</Color>
     <SolidColorBrush x:Key="PrimaryColorHover" Color="{StaticResource PrimaryColorHoverValue}"/>
 
+    <Color x:Key="SecondaryColorValue">#a8abb3</Color>
+    <SolidColorBrush x:Key="SecondaryColor" Color="{StaticResource SecondaryColorValue}"/>
+
     <SolidColorBrush x:Key="MainBackground" Color="#1a1b1e"/>
     <SolidColorBrush x:Key="SidebarBackground" Color="#2c2d31"/>
 
@@ -18,6 +21,7 @@
     <SolidColorBrush x:Key="HoverColor" Color="#374151"/>
     <SolidColorBrush x:Key="PressedColor" Color="#4b5563"/>
     <SolidColorBrush x:Key="BorderColor" Color="#e5e7eb"/>
+    <SolidColorBrush x:Key="PrimaryButtonTextColor" Color="{StaticResource PrimaryTextColorValue}"/>
 
     <!-- FileSyncProgress -->
     <SolidColorBrush x:Key="CardBackground" Color="#2c2d31"/>
@@ -25,5 +29,9 @@
     <SolidColorBrush x:Key="IconBackground" Color="#f3f4f6"/>
     <SolidColorBrush x:Key="IconForeground" Color="#6b7280"/>
     <SolidColorBrush x:Key="InputBackground" Color="#ffffff"/>
+    <SolidColorBrush x:Key="InputTextColor" Color="#000000"/>
     <SolidColorBrush x:Key="ProgressBarBackground" Color="#e5e7eb"/>
+    <!-- FileIcon -->
+    <SolidColorBrush x:Key="GreenColor" Color="#1B8F3D"/>
+    <SolidColorBrush x:Key="RedColor" Color="#CF3729"/>
 </ResourceDictionary>

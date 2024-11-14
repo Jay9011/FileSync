@@ -106,6 +106,8 @@ public class SettingsViewModel : ViewModelBase
         }
         
         _settingsService.SaveSettings(Settings);
+
+        _popupService.ShowMessage("Settings saved successfully", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     
     /// <summary>

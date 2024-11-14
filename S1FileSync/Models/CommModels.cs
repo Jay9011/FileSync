@@ -10,7 +10,8 @@ public enum FileSyncMessageType
     ProgressUpdate,
     StatusChange,
     Error,
-    ServiceCommand
+    ServiceCommand,
+    ConnectionStatus
 }
 
 /// <summary>

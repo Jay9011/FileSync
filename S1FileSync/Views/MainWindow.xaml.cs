@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Media.Animation;
 using Microsoft.Extensions.DependencyInjection;
+using S1FileSync.Helpers;
 using S1FileSync.Services;
 using S1FileSync.Services.Interface;
 using S1FileSync.ViewModels;
@@ -14,15 +15,15 @@ namespace S1FileSync
     public partial class MainWindow : Window
     {
         #region 의존 주입
-        
-        private MainViewModel _viewModel => (MainViewModel)DataContext;
+
+        private readonly MainViewModel _viewModel;
         private readonly IServiceProvider _serviceProvider;
         private readonly ITrayIconService _trayIconService;
 
         #endregion
-
-        private bool _isSidebarExpanded = true;
-        private bool _isDarkTheme = true;
+        
+        private Storyboard? _expeandSidebarStoryboard;
+        private Storyboard? _collapseSidebarStoryboard;
         
         public MainWindow(MainViewModel mainViewModel, IServiceProvider serviceProvider, ITrayIconService trayIconService, SettingsView settingsView, SyncMonitorView syncMonitorView, FileSyncProgressView progressView, FileSyncIPCClient ipcClient)
         {
@@ -30,13 +31,18 @@ namespace S1FileSync
 
             #region 의존 주입
 
+            _viewModel = mainViewModel;
             _serviceProvider = serviceProvider;
             _trayIconService = trayIconService;
 
             #endregion
 
             mainViewModel.MonitorView = syncMonitorView;
+            mainViewModel.ProgressView = progressView;
             mainViewModel.SettingsView = settingsView;
+            
+            _expeandSidebarStoryboard = FindResource("SidebarExpandAnimation") as Storyboard;
+            _collapseSidebarStoryboard = FindResource("SidebarCollapseAnimation") as Storyboard;
             
             DataContext = mainViewModel;
             
@@ -91,14 +97,21 @@ namespace S1FileSync
 
         private void ToggleSidebarClick(object sender, RoutedEventArgs e)
         {
-            _isSidebarExpanded = !_isSidebarExpanded;
-            var storyboard = (Storyboard)FindResource(_isSidebarExpanded ? "SidebarExpandAnimation" : "SidebarCollapseAnimation");
-            storyboard.Begin();
+            if (_viewModel.IsSidebarExpanded)
+            {
+                _collapseSidebarStoryboard?.Begin();
+            }
+            else
+            {
+                _expeandSidebarStoryboard?.Begin();
+            }
+            
+            _viewModel.IsSidebarExpanded = !_viewModel.IsSidebarExpanded;
+            /* NavText.Opacity = _viewModel.IsSidebarExpanded ? 1 : 0;*/
         }
 
         private void ThemeToggleClick(object sender, RoutedEventArgs e)
         {
-            _viewModel.IsDarkTheme = !_viewModel.IsDarkTheme;
             ApplyTheme();
         }
 
@@ -107,19 +120,7 @@ namespace S1FileSync
         /// </summary>
         private void ApplyTheme()
         {
-            var existingTheme = Application.Current.Resources.MergedDictionaries.FirstOrDefault(d => d.Source?.ToString().Contains("Theme") == true);
-
-            if (existingTheme != null)
-            {
-                Application.Current.Resources.MergedDictionaries.Remove(existingTheme);
-            }
-            
-            var themeDictionary = new ResourceDictionary
-            {
-                Source = new Uri($"pack://application:,,,/Views/Themes/{(_viewModel.IsDarkTheme ? "Dark" : "Light")}Theme.xaml")
-            };
-            
-            Application.Current.Resources.MergedDictionaries.Add(themeDictionary);
+            ThemeManager.ChangeTheme(_viewModel.IsDarkTheme ? Theme.Dark : Theme.Light);
         }
     }
 }

@@ -23,6 +23,28 @@ public class FileSyncIPCClient : IDisposable
         }
     }
     
+    private bool _connected;
+
+    public bool Connected
+    {
+        get { return _connected; }
+        private set
+        {
+            _connected = value;
+        }
+    }
+    
+    private string _connectionStatus = "Disconnected";
+
+    public string ConnectionStatus
+    {
+        get { return _connectionStatus; }
+        private set
+        {
+            _connectionStatus = value;
+        }
+    }
+    
     private const string PipeName = "S1FileSyncPipe";
     private readonly IIPCClient<FileSyncMessage> _client;
     private readonly Dispatcher _UIDispatcher;
@@ -115,6 +137,23 @@ public class FileSyncIPCClient : IDisposable
                     if (Enum.TryParse<TrayIconStatus>(message.Content.Message, out var status))
                     {
                         _trayIconService.SetStatus(status);
+                    }
+                }
+                    break;
+                case FileSyncMessageType.ConnectionStatus:
+                {
+                    if (!string.IsNullOrEmpty(message.Content.Message) &&
+                        string.Equals(message.Content.Message, "Connected", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ConnectionStatus = "Connected";
+                        Connected = true;
+                        _trayIconService.SetStatus(TrayIconStatus.Normal);
+                    }
+                    else
+                    {
+                        ConnectionStatus = message.Content.Message;
+                        Connected = false;
+                        _trayIconService.SetStatus(TrayIconStatus.Error);
                     }
                 }
                     break;
