@@ -31,6 +31,7 @@ public class FileSyncIPCClient : IDisposable
         private set
         {
             _connected = value;
+            OnStatusChanged?.Invoke();
         }
     }
     

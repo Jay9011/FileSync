@@ -80,13 +80,13 @@ try
 
         try
         {
-            SecurityIdentifier localServiceSid = new SecurityIdentifier(WellKnownSidType.LocalServiceSid, null);
+            SecurityIdentifier serviceSid = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
 
             DirectoryInfo dirInfo = new DirectoryInfo(baseDir);
             DirectorySecurity dirSecurity = dirInfo.GetAccessControl();
 
             dirSecurity.AddAccessRule(new FileSystemAccessRule(
-                localServiceSid,
+                serviceSid,
                 FileSystemRights.FullControl,
                 InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
                 PropagationFlags.None,
@@ -98,7 +98,7 @@ try
             DirectorySecurity logsDirSecurity = logsDirInfo.GetAccessControl();
 
             logsDirSecurity.AddAccessRule(new FileSystemAccessRule(
-                localServiceSid,
+                serviceSid,
                 FileSystemRights.FullControl,
                 InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
                 PropagationFlags.None,
@@ -110,7 +110,7 @@ try
             FileSecurity iniFileSecurity = iniFileInfo.GetAccessControl();
 
             iniFileSecurity.AddAccessRule(new FileSystemAccessRule(
-                localServiceSid,
+                serviceSid,
                 FileSystemRights.FullControl,
                 AccessControlType.Allow));
 

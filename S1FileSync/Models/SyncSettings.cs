@@ -367,7 +367,32 @@ public class SyncSettings
             throw new ArgumentException($"Invalid folder pattern: {e.Message}");
         }
     }
-    
+
+    public override bool Equals(object? obj)
+    {
+        // 설정들 비교
+        if (obj == null)
+        {
+            return false;
+        }
+
+        if (obj is not SyncSettings other)
+        {
+            return false;
+        }
+
+        SyncSettings others = obj as SyncSettings;
+
+        return RemoteLocation == others.RemoteLocation &&
+               Username == others.Username &&
+               Password == others.Password &&
+               LocalLocation == others.LocalLocation &&
+               FolderPattern == others.FolderPattern &&
+               FileExtensions == others.FileExtensions &&
+               SyncInterval == others.SyncInterval &&
+               UseFlatStructure == others.UseFlatStructure &&
+               DuplicateHandling == others.DuplicateHandling;
+    }
 }
 
 public static class ConstSettings

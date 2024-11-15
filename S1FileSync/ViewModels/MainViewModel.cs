@@ -90,7 +90,22 @@ public class MainViewModel : ViewModelBase
         get => _connectionStatus;
         set => SetField(ref _connectionStatus, value);
     }
-    
+
+    public string _getConnected = "Unknown";
+    public string GetConnected
+    {
+        get => _getConnected;
+        set => SetField(ref _getConnected, value);
+    }
+
+    public bool _getConnectedStatus = false;
+    public bool GetConnectedStatus
+    {
+        get => _getConnectedStatus;
+        set => SetField(ref _getConnectedStatus, value);
+    }
+
+
     public ICommand StartSyncCommand { get; set; }
     public ICommand StopSyncCommand { get; set; }
     public ICommand CheckStatusCommand { get; set; }
@@ -172,6 +187,25 @@ public class MainViewModel : ViewModelBase
         IPCStatus = _ipcClient.IPCStatus;
         IsConnected = _ipcClient.Connected;
         ConnectionStatus = _ipcClient.ConnectionStatus;
+
+        GetConnectedStatus = IsServiceRunning && IsConnected && !string.Equals(IPCStatus, "Disconnected");
+        
+        if (!IsConnected)
+        {
+            GetConnected = ConnectionStatus;
+        }
+        else if (!IsServiceRunning)
+        {
+            GetConnected = ServiceStatus;
+        }
+        else if (string.Equals(IPCStatus, "Disconnected"))
+        {
+            GetConnected = IPCStatus;
+        }
+        else if (IsConnected && IsServiceRunning)
+        {
+            GetConnected = "Connected";
+        }
     }
 
 }

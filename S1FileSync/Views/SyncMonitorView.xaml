@@ -42,13 +42,13 @@
                             Background="{DynamicResource HoverColor}"
                             CornerRadius="16"
                             Padding="12,6">
-                        <TextBlock Text="{Binding ConnectionStatus}"
+                        <TextBlock Text="{Binding GetConnected}"
                                    FontSize="14">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="{DynamicResource SecondaryTextColor}"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                        <DataTrigger Binding="{Binding GetConnectedStatus}" Value="True">
                                             <Setter Property="Foreground" Value="{DynamicResource GreenColor}"/>
                                         </DataTrigger>
                                     </Style.Triggers>

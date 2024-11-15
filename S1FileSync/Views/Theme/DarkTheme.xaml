@@ -32,6 +32,6 @@
     <SolidColorBrush x:Key="InputTextColor" Color="#000000"/>
     <SolidColorBrush x:Key="ProgressBarBackground" Color="#e5e7eb"/>
     <!-- FileIcon -->
-    <SolidColorBrush x:Key="GreenColor" Color="#1B8F3D"/>
+    <SolidColorBrush x:Key="GreenColor" Color="#1BAF3D"/>
     <SolidColorBrush x:Key="RedColor" Color="#CF3729"/>
 </ResourceDictionary>

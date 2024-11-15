@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
-	<Product Id="{7800F3F4-7F04-4AA8-9574-2A4B5F2803AF}" Name="S1FileSync" Language="1033" Codepage="65001" Version="1.0.0.0" Manufacturer="Jay9011" UpgradeCode="6ed4c294-9800-4c99-85a3-cb6f1a9f8d99">
+	<Product Id="{7800F3F4-7F04-4AA8-9574-2A4B5F2803AF}" Name="S1FileSync" Language="1033" Codepage="65001" Version="1.0.0.0" Manufacturer="SECUiDEA" UpgradeCode="6ed4c294-9800-4c99-85a3-cb6f1a9f8d99">
 		<Package Id="*" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated" 
 		         Keywords="Installer,MSI" Description="S1FileSync - File Synchronization Program" Comments="File Synchronization Program and Service"/>
 
@@ -14,7 +14,7 @@
 		<Icon Id="app.ico" SourceFile="$(var.S1FileSync.ProjectDir)Assets\app.ico"/>
 		<Property Id="ARPPRODUCTICON" Value="app.ico" />
 		<Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
-		<Property Id="ARPCONTACT" Value="Jay9011" />
+		<Property Id="ARPCONTACT" Value="SECUiDEA" />
 		<Property Id="ARPCOMMENTS" Value="File Synchronization Program and Service" />
 
 		<Condition Message="Administrator privileges are required.">
@@ -25,11 +25,6 @@
 			<Directory Id="ProgramFilesFolder">
 				<Directory Id="INSTALLFOLDER" Name="S1FileSync">
 					<Directory Id="ServiceFolder" Name="Service" />
-					<Component Id="CleanupMainApplicationFolder" Guid="*">
-						<RemoveFolder Id="INSTALLFOLDER" On="uninstall"/>
-						<RegistryValue Root="HKLM" Key="Software\SECUiDEA\S1FileSync"
-									   Name="installed" Type="integer" Value="1" KeyPath="yes"/>
-					</Component>
 				</Directory>
 			</Directory>
 			<Directory Id="ProgramMenuFolder">
@@ -47,6 +42,20 @@
 				</Directory>
 			</Directory>
 		</Directory>
+		<DirectoryRef Id="INSTALLFOLDER">
+			<Component Id="DirectoryPermissions" Guid="EB943C11-3E1F-45B2-9C85-9E2A648000D3">
+				<CreateFolder>
+					<util:PermissionEx User="LocalSystem" GenericAll="yes" />
+				</CreateFolder>
+			</Component>
+			<Component Id="CleanupMainApplicationFolder" Guid="*">
+				<RemoveFile Id="RemoveFiles" Name="*" On="uninstall"/>
+				<RemoveFolder Id="INSTALLFOLDER" On="uninstall"/>
+				<RegistryValue Root="HKLM" Key="Software\SECUiDEA\S1FileSync"
+							   Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+			</Component>
+		</DirectoryRef>
+
 		<Feature Id="Complete" Title="S1FileSync" Level="1"
 		         Description="File synchronization program with background service"
 		         Display="expand" ConfigurableDirectory="INSTALLFOLDER">
@@ -56,16 +65,9 @@
 			<ComponentRef Id="StartupRegistryEntry" />
 			<ComponentRef Id="CleanupMainApplicationFolder" />
 			<ComponentRef Id="ApplicationShortcut" />
+			<ComponentRef Id="DirectoryPermissions" />
 		</Feature>
-
-		<Binary Id="CleanupCA" SourceFile="cleanup.vbs"/>
-		<CustomAction Id="CleanupFiles" BinaryKey="CleanupCA" VBScriptCall="Main" Execute="deferred" Return="check"/>
 		<WixVariable Id="WixUILicenseRtf" Value="License.rtf"/>
-
-		<InstallExecuteSequence>
-			<Custom Action="CleanupFiles" After="RemoveFiles">REMOVE="ALL"</Custom>
-		</InstallExecuteSequence>
-
 		<UI>
 			<UIRef Id="WixUI_InstallDir" />
 			<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
@@ -86,7 +88,7 @@
 			                Description="File synchronization service"
 			                Start="demand"
 			                ErrorControl="normal"
-			                Account="NT AUTHORITY\LocalService">
+			                Account="LocalSystem">
 				<util:ServiceConfig FirstFailureActionType="restart" 
 				                    SecondFailureActionType="restart" 
 				                    ThirdFailureActionType="restart" 

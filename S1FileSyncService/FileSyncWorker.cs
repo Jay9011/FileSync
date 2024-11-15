@@ -17,11 +17,14 @@ namespace S1FileSyncService
         private readonly ISendMessage _sendMessage;
         private readonly FileSyncIPCServer _ipcServer;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private readonly CancellationTokenSource _workerCts = new();
 
         #endregion
 
         private SyncSettings _settings;
         private readonly TimeSpan _connectionCheckInterval = TimeSpan.FromSeconds(3);
+        private readonly TimeSpan _settingsCheckInterval = TimeSpan.FromSeconds(3);
+        private TimeSpan _currentSyncInterval;
 
 #if DEBUG
         private readonly TimeSpan _iconUpdateInterval = TimeSpan.FromSeconds(3);
@@ -48,22 +51,47 @@ namespace S1FileSyncService
                 await LoadSettings();
                 await _ipcServer.StartAsync(stoppingToken);
 
-                using var syncTimer = new PeriodicTimer(_settings.SyncIntervalTimeSpan);
-                using var settingsCheckTimer = new PeriodicTimer(_connectionCheckInterval);
-                
                 _ipcServer.MessageReceived += OnMessageReceived;
-                
-#if DEBUG
+
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, _workerCts.Token);
+#if false
                 using var iconUpdateTimer = new PeriodicTimer(_iconUpdateInterval);
 #endif
-#if !DEBUG
+#if true
                 // 모든 비동기 작업이 완료될 때까지 대기 (각 작업은 PeriodicTimer를 통해 별도의 타이머로 실행)
-                await Task.WhenAll(
-                    RunFileSyncLoop(syncTimer, _cancellationTokenSource.Token),
-                    RunConnectionCheckLoop(settingsCheckTimer, _cancellationTokenSource.Token)
-                );
+                while (!linkedCts.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        _logger.LogInformation("Starting sync loop with interval : {interval}", _currentSyncInterval);
+
+                        using var loopCts = CancellationTokenSource.CreateLinkedTokenSource(linkedCts.Token);
+                        using var syncTimer = new PeriodicTimer(_currentSyncInterval);
+                        using var connectionCheckTimer = new PeriodicTimer(_connectionCheckInterval);
+                        using var settingsCheckTimer = new PeriodicTimer(_settingsCheckInterval);
+
+                        await Task.WhenAll(
+                            RunFileSyncLoop(syncTimer, loopCts.Token),
+                            RunConnectionCheckLoop(connectionCheckTimer, loopCts.Token),
+                            SettingsCheckTask(settingsCheckTimer, loopCts, loopCts.Token)
+                        );
+                    }
+                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogInformation("Settings have changed. restarting sync loop.");
+                        continue;
+                    }
+                    catch (Exception e)
+                    {
+                        break;
+                    }
+                }
 #endif
-#if DEBUG
+#if false
                 await Task.WhenAll(
                     RunUpdateTestLoop(iconUpdateTimer, _cancellationTokenSource.Token)
                 );
@@ -78,6 +106,7 @@ namespace S1FileSyncService
         private async Task LoadSettings()
         {
             _settings = _settingsService.LoadSettings();
+            _currentSyncInterval = _settings.SyncIntervalTimeSpan;
             _logger.LogInformation($"Settings loaded - File Path: {_settingsService.GetSettingsFilePath()}");
         }
 
@@ -90,8 +119,7 @@ namespace S1FileSyncService
         {
             try
             {
-                while (!stoppingToken.IsCancellationRequested
-                       && await timer.WaitForNextTickAsync(stoppingToken))
+                do
                 {
                     try
                     {
@@ -101,7 +129,8 @@ namespace S1FileSyncService
                     {
                         _logger.LogError(e, "Error occurred while syncing files");
                     }
-                }
+                } while (!stoppingToken.IsCancellationRequested
+                         && await timer.WaitForNextTickAsync(stoppingToken));
             }
             catch (OperationCanceledException e)
             {
@@ -132,15 +161,43 @@ namespace S1FileSyncService
                         
                         await _sendMessage.SendMessageAsync(FileSyncMessageType.ConnectionStatus, connectionStatus, stoppingToken);
                     }
-                    catch (Exception e)
+                    catch (Exception e) when(e is not SettingsChangedException)
                     {
                         _logger.LogError(e, "Error occurred while checking settings");
                     }
                 }
             }
-            catch (OperationCanceledException e)
+            catch (OperationCanceledException e) when (stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation("Settings check loop stopped");
+            }
+        }
+
+        private async Task SettingsCheckTask(PeriodicTimer timer, CancellationTokenSource ctSource, CancellationToken stoppingToken)
+        {
+            try
+            {
+                while (!stoppingToken.IsCancellationRequested
+                       && await timer.WaitForNextTickAsync(stoppingToken))
+                {
+                    var settings = _settingsService.LoadSettings();
+                    if (!settings.Equals(_settings))
+                    {
+                        _logger.LogInformation("Settings changed. Reloading...");
+
+                        _settings = settings;
+                        _currentSyncInterval = _settings.SyncIntervalTimeSpan;
+                        ctSource.Cancel();
+                    }
+                }
+            }
+            catch (OperationCanceledException e) when (stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Settings check loop stopped");
+            }
+            finally
+            {
+                timer.Dispose();
             }
         }
 
@@ -226,8 +283,12 @@ namespace S1FileSyncService
         public override Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Stopping the service");
-            _cancellationTokenSource.Cancel();
+            _workerCts.Cancel();
             return base.StopAsync(cancellationToken);
         }
+    }
+
+    public class SettingsChangedException : Exception
+    {
     }
 }

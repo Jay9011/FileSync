@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
 using NetConnectionHelper.Helpers;
@@ -37,6 +38,8 @@ public class FileSyncService : IFileSync
     private const int UIUpdateInterval = 100;
 
     #endregion
+    
+    private readonly ConcurrentDictionary<string, bool> _syncingFiles = new();
     
     public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, ISyncProgressWithUI syncProgressUi, ISendMessage sendMessage)
     {
@@ -140,6 +143,11 @@ public class FileSyncService : IFileSync
     /// <param name="settings"></param>
     private async Task SyncFile(FileInfo remoteFileInfo, string destFilePath, SyncSettings settings)
     {
+        if (!_syncingFiles.TryAdd(destFilePath, true))
+        {
+            return;
+        }
+        
         bool shouldCopy = true;
 
         if (File.Exists(destFilePath))
@@ -161,15 +169,27 @@ public class FileSyncService : IFileSync
             }
         }
 
-        if (shouldCopy)
+        try
         {
-            var directory = Path.GetDirectoryName(destFilePath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            if (shouldCopy)
             {
-                Directory.CreateDirectory(directory);
+                var directory = Path.GetDirectoryName(destFilePath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                await CopyFileAsync(remoteFileInfo, destFilePath);
             }
-            
-            await CopyFileAsync(remoteFileInfo, destFilePath);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, $"파일 동기화 중 오류가 발생했습니다: {destFilePath}");
+            throw;
+        }
+        finally
+        {
+            _syncingFiles.TryRemove(destFilePath, out _);
         }
     }
 
