@@ -32,7 +32,8 @@ public class FileSyncProgressViewModel : ViewModelBase
                     FileName = fileName,
                     FileSize = fileSize,
                     Progress = 0,
-                    IsCompleted = false
+                    IsCompleted = false,
+                    LastSyncTime = DateTime.Now
                 };
                 SyncItems.Add(item);
             }

@@ -39,6 +39,8 @@
 			<ComponentRef Id="StartupRegistryEntry" />
 		</Feature>
 
+		<WixVariable Id="WixUILicenseRtf" Value="License.rtf"/>
+
 		<UI>
 			<UIRef Id="WixUI_InstallDir" />
 			<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
@@ -59,12 +61,12 @@
 			                Description="File synchronization service"
 			                Start="demand"
 			                ErrorControl="normal"
-			                Account="NT AUTHORITY\LocalService"
-			                Password="">
-				<util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" 
+			                Account="NT AUTHORITY\LocalService">
+				<util:ServiceConfig FirstFailureActionType="restart" 
+				                    SecondFailureActionType="restart" 
+				                    ThirdFailureActionType="restart" 
 				                    RestartServiceDelayInSeconds="60"
 				                    ResetPeriodInDays="1"/>
-				<Permission User="Users" ServicePipeAccess="readWrite"/>
 			</ServiceInstall>
 
 			<ServiceControl Id="StartService"

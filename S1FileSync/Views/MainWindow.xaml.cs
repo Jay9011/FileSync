@@ -2,7 +2,6 @@
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Media.Animation;
-using Microsoft.Extensions.DependencyInjection;
 using S1FileSync.Helpers;
 using S1FileSync.Services;
 using S1FileSync.Services.Interface;
@@ -21,6 +20,8 @@ namespace S1FileSync
         private readonly ITrayIconService _trayIconService;
 
         #endregion
+        
+        private const double MinWidthForExpandedSidebar = 800;
         
         private Storyboard? _expeandSidebarStoryboard;
         private Storyboard? _collapseSidebarStoryboard;
@@ -45,6 +46,8 @@ namespace S1FileSync
             _collapseSidebarStoryboard = FindResource("SidebarCollapseAnimation") as Storyboard;
             
             DataContext = mainViewModel;
+            
+            SizeChanged += OnWindowSizeChanged;
             
             // 트레이 아이콘 서비스
             _trayIconService.WindowOpenRequested += WindowOpenRequested;
@@ -95,6 +98,20 @@ namespace S1FileSync
             Application.Current.Shutdown();
         }
 
+        private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (e.NewSize.Width < MinWidthForExpandedSidebar &&
+                _viewModel.IsSidebarExpanded)
+            {
+                ToggleSidebarClick(this, new RoutedEventArgs());
+            }
+            else if (e.NewSize.Width >= MinWidthForExpandedSidebar &&
+                     !_viewModel.IsSidebarExpanded)
+            {
+                ToggleSidebarClick(this, new RoutedEventArgs());
+            }
+        }
+
         private void ToggleSidebarClick(object sender, RoutedEventArgs e)
         {
             if (_viewModel.IsSidebarExpanded)
@@ -107,7 +124,6 @@ namespace S1FileSync
             }
             
             _viewModel.IsSidebarExpanded = !_viewModel.IsSidebarExpanded;
-            /* NavText.Opacity = _viewModel.IsSidebarExpanded ? 1 : 0;*/
         }
 
         private void ThemeToggleClick(object sender, RoutedEventArgs e)

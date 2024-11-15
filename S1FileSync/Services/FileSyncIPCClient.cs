@@ -183,11 +183,6 @@ public class FileSyncIPCClient : IDisposable
             item.Progress = progress.Progress;
             item.SyncSpeed = progress.Speed;
             item.IsCompleted = progress.IsCompleted;
-
-            if (progress.IsCompleted)
-            {
-                item.LastSyncTime = DateTime.Now;
-            }
         }
         
         _progressViewModel.RemoveCompletedItems();

@@ -19,7 +19,7 @@ public class FileSyncService : IFileSync
     private readonly ISettingsService _settingsService;
     private readonly IRemoteConnectionHelper _connectionHelper;
     private readonly ISyncProgressWithUI _syncProgressUI;
-    private readonly FileSyncIPCServer _ipcServer;
+    private readonly ISendMessage _sendMessage;
 
     #endregion
 
@@ -38,7 +38,7 @@ public class FileSyncService : IFileSync
 
     #endregion
     
-    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, ISyncProgressWithUI syncProgressUi, FileSyncIPCServer ipcServer)
+    public FileSyncService(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IRemoteConnectionHelper connectionHelper, ISyncProgressWithUI syncProgressUi, ISendMessage sendMessage)
     {
         #region 의존 주입
         
@@ -46,7 +46,7 @@ public class FileSyncService : IFileSync
         _settingsService = settingsService;
         _connectionHelper = connectionHelper;
         _syncProgressUI = syncProgressUi;
-        _ipcServer = ipcServer;
+        _sendMessage = sendMessage;
 
         #endregion
     }
@@ -68,17 +68,17 @@ public class FileSyncService : IFileSync
 
             try
             {
-                await _ipcServer.SendMessageAsync(new FileSyncMessage(FileSyncMessageType.StatusChange, TrayIconStatus.Syncing.ToString()));
+                await _sendMessage.SendMessageAsync(FileSyncMessageType.StatusChange, TrayIconStatus.Syncing.ToString());
             }
             catch (Exception)
             {
             }
             
-            await SyncDirectory(settings.LocalLocation, remoteUncPath);
+            await SyncDirectory(settings.LocalLocation, remoteUncPath, settings);
 
             try
             {
-                await _ipcServer.SendMessageAsync(new FileSyncMessage(FileSyncMessageType.StatusChange, TrayIconStatus.Normal.ToString()));
+                await _sendMessage.SendMessageAsync(FileSyncMessageType.StatusChange, TrayIconStatus.Normal.ToString());
             }
             catch (Exception)
             {
@@ -87,7 +87,7 @@ public class FileSyncService : IFileSync
         catch (Exception e)
         {
             _logger.LogError(e, "파일 동기화 중 오류가 발생했습니다.");
-            await _ipcServer.SendMessageAsync(new FileSyncMessage(FileSyncMessageType.StatusChange, TrayIconStatus.Error.ToString()));
+            await _sendMessage.SendMessageAsync(FileSyncMessageType.StatusChange, TrayIconStatus.Error.ToString());
         }
     }
 
@@ -104,9 +104,9 @@ public class FileSyncService : IFileSync
     /// </summary>
     /// <param name="localPath">대상 경로</param>
     /// <param name="remotePath">원격 경로</param>
-    private async Task SyncDirectory(string localPath, string remotePath)
+    private async Task SyncDirectory(string localPath, string remotePath, SyncSettings? settings = null)
     {
-        var settings = _settingsService.LoadSettings();
+        settings ??= _settingsService.LoadSettings();
         
         // 원격 디렉토리의 모든 파일 가져오기
         var remoteFiles = GetFilteredFiles(remotePath, settings);
@@ -135,7 +135,7 @@ public class FileSyncService : IFileSync
     /// <summary>
     /// 단일 파일 동기화
     /// </summary>
-    /// <param name="sourceFilePath">원본 파일 경로</param>
+    /// <param name="remoteFileInfo">원본 파일 정보</param>
     /// <param name="destFilePath">목적 파일 경로</param>
     /// <param name="settings"></param>
     private async Task SyncFile(FileInfo remoteFileInfo, string destFilePath, SyncSettings settings)
@@ -254,57 +254,77 @@ public class FileSyncService : IFileSync
     /// <param name="destinationFilePath">대상 파일 경로</param>
     private async Task CopyFileAsync(FileInfo sourceFileInfo, string destinationFilePath)
     {
+        const int MaxRetries = 3;
+        const int InitialDelay = 1000;
+
         var directory = Path.GetDirectoryName(destinationFilePath);
         if (!Directory.Exists(directory))
         {
             if (directory != null) Directory.CreateDirectory(directory);
         }
-        
-        int bufferSize = DetermineBufferSize(sourceFileInfo.Length);
-        byte[] buffer = new byte[bufferSize];
-        
-        long totalByteRead = 0;
-        var sw = Stopwatch.StartNew();
-        
-        try
+
+        var drive = new DriveInfo(Path.GetPathRoot(destinationFilePath));
+        if (drive.AvailableFreeSpace < sourceFileInfo.Length)
         {
-            using (var sourceStream = new FileStream(sourceFileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan))
-            using (var destinationStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            _logger.LogWarning($"디스크 여유 공간이 부족합니다: {destinationFilePath}");
+            return;
+        }
+
+        for (int attempts = 0; attempts <= MaxRetries; attempts++)
+        {
+            int bufferSize = DetermineBufferSize(sourceFileInfo.Length);
+            byte[] buffer = new byte[bufferSize];
+            long totalByteRead = 0;
+
+            try
             {
-                int bytesRead;
-                DateTime lastUpdate = DateTime.Now;
-
-                while ((bytesRead = await sourceStream.ReadAsync(buffer)) > 0)
+                using (var sourceStream = new FileStream(sourceFileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                using (var destinationStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan))
                 {
-                    await destinationStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                    totalByteRead += bytesRead;
+                    int bytesRead;
+                    DateTime lastUpdate = DateTime.Now;
+                    var sw = Stopwatch.StartNew();
 
-                    var now = DateTime.Now;
-                    if ((now - lastUpdate).TotalMilliseconds >= UIUpdateInterval)
+                    while ((bytesRead = await sourceStream.ReadAsync(buffer)) > 0)
                     {
-                        double progress = (double)totalByteRead / sourceFileInfo.Length * 100;
-                        double speed = totalByteRead / sw.Elapsed.TotalSeconds;
-                        
-                        _syncProgressUI.UpdateProgress(
-                            Path.GetFileName(sourceFileInfo.Name),
-                            sourceFileInfo.Length,
-                            progress,
-                            speed
-                        );
-                        
-                        lastUpdate = now;
-                    }
-                    
-                }
-            }
+                        await destinationStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                        totalByteRead += bytesRead;
 
-            File.SetLastWriteTimeUtc(destinationFilePath, sourceFileInfo.LastWriteTimeUtc);
-            _syncProgressUI.CompleteProgress(Path.GetFileName(sourceFileInfo.Name));
+                        var now = DateTime.Now;
+                        if ((now - lastUpdate).TotalMilliseconds >= UIUpdateInterval)
+                        {
+                            double progress = (double)totalByteRead / sourceFileInfo.Length * 100;
+                            double speed = totalByteRead / sw.Elapsed.TotalSeconds;
+
+                            _syncProgressUI.UpdateProgress(
+                                Path.GetFileName(sourceFileInfo.Name),
+                                sourceFileInfo.Length,
+                                progress,
+                                speed
+                            );
+
+                            lastUpdate = now;
+                        }
+                    }
+                }
+
+                File.SetLastWriteTimeUtc(destinationFilePath, sourceFileInfo.LastWriteTimeUtc);
+                _syncProgressUI.CompleteProgress(Path.GetFileName(sourceFileInfo.Name));
+                return;
+            }
+            catch (IOException e) when (attempts < MaxRetries)
+            {
+                _logger.LogWarning(e, $"파일 동기화 중 오류가 발생했습니다: {destinationFilePath}");
+                await Task.Delay(InitialDelay * (attempts + 1));
+            }
+            catch (Exception e) when (attempts < MaxRetries)
+            {
+                _logger.LogWarning(e, $"알 수 없는 오류가 발생했습니다: {destinationFilePath}");
+                await Task.Delay(InitialDelay * (attempts + 1));
+            }
         }
-        catch (Exception e)
-        {
-            _logger.LogWarning(e, $"파일 동기화 중 오류가 발생했습니다: {destinationFilePath}" );
-        }
+        
+        throw new IOException($"파일 동기화 {MaxRetries}회 시도 후 실패: {destinationFilePath}");
     }
 
     /// <summary>

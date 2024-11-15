@@ -6,6 +6,7 @@
              xmlns:local="clr-namespace:S1FileSync.Views"
              xmlns:model="clr-namespace:S1FileSync.ViewModels"
              xmlns:converters="clr-namespace:S1FileSync.Converters"
+             xmlns:componentModel="clr-namespace:System.ComponentModel;assembly=WindowsBase"
              d:DataContext="{d:DesignInstance Type=model:FileSyncProgressViewModel}"
              mc:Ignorable="d">
     <UserControl.Resources>
@@ -48,9 +49,15 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <CollectionViewSource x:Key="SyncItemsView" Source="{Binding SyncItems}">
+            <CollectionViewSource.SortDescriptions>
+                <componentModel:SortDescription PropertyName="LastSyncTime" Direction="Descending"/>
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
     </UserControl.Resources>
 
-    <ItemsControl ItemsSource="{Binding SyncItems}">
+    <ItemsControl ItemsSource="{Binding Source={StaticResource SyncItemsView}}">
         <ItemsControl.ItemTemplate>
             <DataTemplate>
                 <Border Style="{StaticResource ProgressCardStyle}"

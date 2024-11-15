@@ -14,20 +14,21 @@ namespace S1FileSyncService
         private readonly ILogger<FileSyncWorker> _logger;
         private readonly ISettingsService _settingsService;
         private readonly IFileSync _fileSync;
+        private readonly ISendMessage _sendMessage;
         private readonly FileSyncIPCServer _ipcServer;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
 
         #endregion
 
         private SyncSettings _settings;
-        private readonly TimeSpan _settingsCheckInterval = TimeSpan.FromSeconds(3);
+        private readonly TimeSpan _connectionCheckInterval = TimeSpan.FromSeconds(3);
 
 #if DEBUG
         private readonly TimeSpan _iconUpdateInterval = TimeSpan.FromSeconds(3);
 #endif
         
 
-        public FileSyncWorker(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IFileSync fileSync, FileSyncIPCServer ipcServer)
+        public FileSyncWorker(ILogger<FileSyncWorker> logger, ISettingsService settingsService, IFileSync fileSync, FileSyncIPCServer ipcServer, ISendMessage sendMessage)
         {
             #region 의존 주입
 
@@ -35,6 +36,7 @@ namespace S1FileSyncService
             _settingsService = settingsService;
             _fileSync = fileSync;
             _ipcServer = ipcServer;
+            _sendMessage = sendMessage;
 
             #endregion
         }
@@ -47,18 +49,20 @@ namespace S1FileSyncService
                 await _ipcServer.StartAsync(stoppingToken);
 
                 using var syncTimer = new PeriodicTimer(_settings.SyncIntervalTimeSpan);
-                using var settingsCheckTimer = new PeriodicTimer(_settingsCheckInterval);
+                using var settingsCheckTimer = new PeriodicTimer(_connectionCheckInterval);
                 
                 _ipcServer.MessageReceived += OnMessageReceived;
                 
 #if DEBUG
                 using var iconUpdateTimer = new PeriodicTimer(_iconUpdateInterval);
 #endif
+#if !DEBUG
                 // 모든 비동기 작업이 완료될 때까지 대기 (각 작업은 PeriodicTimer를 통해 별도의 타이머로 실행)
                 await Task.WhenAll(
                     RunFileSyncLoop(syncTimer, _cancellationTokenSource.Token),
-                    RunSettingsCheckLoop(settingsCheckTimer, _cancellationTokenSource.Token)
+                    RunConnectionCheckLoop(settingsCheckTimer, _cancellationTokenSource.Token)
                 );
+#endif
 #if DEBUG
                 await Task.WhenAll(
                     RunUpdateTestLoop(iconUpdateTimer, _cancellationTokenSource.Token)
@@ -110,27 +114,23 @@ namespace S1FileSyncService
         /// </summary>
         /// <param name="timer"></param>
         /// <param name="stoppingToken"></param>
-        private async Task RunSettingsCheckLoop(PeriodicTimer timer, CancellationToken stoppingToken)
+        private async Task RunConnectionCheckLoop(PeriodicTimer timer, CancellationToken stoppingToken)
         {
             try
             {
-                const string processPrefix = "Settings check: ";
-                string statusMessage = "No changes detected";
+                const string processPrefix = "Connection check: ";
                 
                 while (!stoppingToken.IsCancellationRequested
                        && await timer.WaitForNextTickAsync(stoppingToken))
                 {
                     try
                     {
-                        var newSettings = _settingsService.LoadSettings();
-
                         var (isConnected, message) = await _fileSync.TestConnection();
                         var connectionStatus = isConnected ? "Connected" : message;
 
-                        var remoteServerMessage = new FileSyncMessage(FileSyncMessageType.ConnectionStatus, connectionStatus);
-                        await _ipcServer.SendMessageAsync(remoteServerMessage, stoppingToken);
+                        _logger.LogInformation($"{processPrefix}{connectionStatus} at: {DateTimeOffset.Now}");
                         
-                        _logger.LogInformation($"{processPrefix}{statusMessage} at: {DateTimeOffset.Now}");
+                        await _sendMessage.SendMessageAsync(FileSyncMessageType.ConnectionStatus, connectionStatus, stoppingToken);
                     }
                     catch (Exception e)
                     {

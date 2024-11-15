@@ -48,6 +48,7 @@ builder.Services.AddSingleton<IFileSync, FileSyncService>();
 builder.Services.AddSingleton<IRemoteConnectionHelper, RemoteConnectionSmbHelper>();
 builder.Services.AddSingleton<FileSyncIPCServer>();
 builder.Services.AddSingleton<ISyncProgressWithUI, SyncProgressUI>();
+builder.Services.AddSingleton<ISendMessage, SyncSendMessage>();
 
 string iniFilePath = Path.Combine(WindowsServiceHelpers.IsWindowsService() ? AppContext.BaseDirectory : Directory.GetCurrentDirectory(), "settings.ini");
 builder.Services.AddSingleton<IIniFileHelper>(sp => new IniFileHelper(iniFilePath));
