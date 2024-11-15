@@ -74,6 +74,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Components\Registry.wxs" />
+    <Content Include="cleanup.vbs" />
     <Content Include="Config\ServiceInfo.ini" />
     <Content Include="Config\settings.ini" />
     <Content Include="GenerateCommonFolder.ps1" />

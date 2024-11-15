@@ -25,21 +25,46 @@
 			<Directory Id="ProgramFilesFolder">
 				<Directory Id="INSTALLFOLDER" Name="S1FileSync">
 					<Directory Id="ServiceFolder" Name="Service" />
+					<Component Id="CleanupMainApplicationFolder" Guid="*">
+						<RemoveFolder Id="INSTALLFOLDER" On="uninstall"/>
+						<RegistryValue Root="HKLM" Key="Software\SECUiDEA\S1FileSync"
+									   Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+					</Component>
+				</Directory>
+			</Directory>
+			<Directory Id="ProgramMenuFolder">
+				<Directory Id="ApplicationProgramsFolder" Name="S1FileSync">
+					<Component Id="ApplicationShortcut" Guid="*">
+						<Shortcut Id="ApplicationStartMenuShortcut"
+								  Name="S1FileSync"
+								  Description="File Synchronization Program"
+								  Target="[INSTALLFOLDER]S1FileSync.exe"
+								  WorkingDirectory="INSTALLFOLDER"/>
+						<RemoveFolder Id="ApplicationProgramFolder" On="uninstall"/>
+						<RegistryValue Root="HKCU" Key="Software\SECUiDEA\S1FileSync"
+						               Name="installed" Type="integer" Value="1" KeyPath="yes" />
+					</Component>
 				</Directory>
 			</Directory>
 		</Directory>
-
 		<Feature Id="Complete" Title="S1FileSync" Level="1"
 		         Description="File synchronization program with background service"
 		         Display="expand" ConfigurableDirectory="INSTALLFOLDER">
-
 			<ComponentGroupRef Id="CombinedComponents"/>
 			<ComponentRef Id="ServiceExecutable" />
 			<ComponentRef Id="ServiceInfoFile" />
 			<ComponentRef Id="StartupRegistryEntry" />
+			<ComponentRef Id="CleanupMainApplicationFolder" />
+			<ComponentRef Id="ApplicationShortcut" />
 		</Feature>
 
+		<Binary Id="CleanupCA" SourceFile="cleanup.vbs"/>
+		<CustomAction Id="CleanupFiles" BinaryKey="CleanupCA" VBScriptCall="Main" Execute="deferred" Return="check"/>
 		<WixVariable Id="WixUILicenseRtf" Value="License.rtf"/>
+
+		<InstallExecuteSequence>
+			<Custom Action="CleanupFiles" After="RemoveFiles">REMOVE="ALL"</Custom>
+		</InstallExecuteSequence>
 
 		<UI>
 			<UIRef Id="WixUI_InstallDir" />

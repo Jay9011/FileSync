@@ -4,7 +4,7 @@
         <DirectoryRef Id="INSTALLFOLDER">
             <Component Id="StartupRegistryEntry" Guid="*">
                 <RegistryKey Root="HKCU"
-                             Key="Software\S1FileSync">
+                             Key="Software\SECUiDEA\S1FileSync">
                     <RegistryValue Name="InstallPath"
                                    Value="[INSTALLFOLDER]"
                                    Type="string"/>
