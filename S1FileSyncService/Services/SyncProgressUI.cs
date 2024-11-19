@@ -22,6 +22,20 @@ public class SyncProgressUI : ISyncProgressWithUI
         #endregion
     }
 
+    public void StartProgress(string fileName, long fileSize)
+    {
+        try
+        {
+            var message = new FileSyncMessage(FileSyncMessageType.StatusChange, FileSyncStatusType.SyncStart.ToString());
+            
+            Task.Run(async () => await _ipcServer.SendMessageAsync(message));
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to send progress start message");
+        }
+    }
+
     public void UpdateProgress(string fileName, long fileSize, double progress, double speed)
     {
         try

@@ -8,6 +8,10 @@ namespace NamedPipeLine.Interfaces
     public interface IIPCClient<T> where T: class, IIPCMessage, new()
     {
         /// <summary>
+        /// 클라이언트가 서버와 연결되어 있는지 여부
+        /// </summary>
+        public bool IsConnected { get; }
+        /// <summary>
         /// 서버로부터 메시지를 수신했을 때 발생하는 이벤트
         /// </summary>
         event EventHandler<T>? MessageReceived;

@@ -15,7 +15,7 @@
                 <RegistryValue Root="HKCU"
                                Key="Software\Microsoft\Windows\CurrentVersion\Run"
                                Name="S1FileSync"
-                               Value="[INSTALLFOLDER]S1FileSync.exe"
+                               Value="[INSTALLFOLDER]S1FileSync.exe --autostart"
                                Type="string"
                                KeyPath="yes"/>
             </Component>

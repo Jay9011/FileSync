@@ -13,13 +13,15 @@ namespace NamedPipeLine.Services
         public event EventHandler<T>? MessageReceived;
         
         private readonly string _pipeName;
+        private const int MaxRetryAttempts = 3;
+        private const int RetryDelay = 1000;
+        
         private readonly IMessageSerializer _serializer;
         private readonly CancellationTokenSource _cancellationToken;
         private readonly SemaphoreSlim _createReleaseLock = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _messageLock = new SemaphoreSlim(1, 1);
         
         private volatile bool _isRunning;
-        private volatile bool _shouldReconnect;
         private volatile bool _isDisposed;
         
         private NamedPipeServerStream? _pipeServerStream;
@@ -27,31 +29,19 @@ namespace NamedPipeLine.Services
         private StreamWriter? _writer;
         private StreamReader? _reader;
 
-        #region Heartbeat
-
-        private readonly Timer _heartbeatTimer;
-        private readonly object _heartbeatLock = new object();
-        private DateTime _lastHeartbeatTime = DateTime.MinValue;
-        private const int HeartbeatInterval = 1000;
-        private const int HeartbeatTimeout = 5000;
-        private const int ReconnectDelay = 1000;
-        private const int MaxRetryAttempts = 3;
-
-        #endregion
+        public bool IsPipeValid => IsSafePipe();
+        public bool IsRunning => _isRunning;
+        public bool IsConnected => IsValidPipeState() && _isRunning;
 
         public NamedPipeServer(string pipeName, IMessageSerializer? serializer = null)
         {
             _pipeName = pipeName;
             _serializer = serializer ?? new JsonMessageSerializer();
             _cancellationToken = new CancellationTokenSource();
-            
-            _heartbeatTimer = new Timer(HeartbeatCheck, null, HeartbeatInterval, HeartbeatInterval);
         }
 
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
-            ThrowIfDisposed();
-            
             if (_isRunning)
             {
                 return;
@@ -60,20 +50,18 @@ namespace NamedPipeLine.Services
             try
             {
                 await CreateNewPipeAsync();
-                _isRunning = true;
-                _heartbeatTimer.Change(0, HeartbeatInterval);
+                
                 _messageListenerTask = StartListeningAsync(cancellationToken);
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 _isRunning = false;
+                throw;
             }
         }
 
         public async Task SendMessageAsync(T message)
         {
-            ThrowIfDisposed();
-
             for (int attempt = 0; attempt < MaxRetryAttempts; attempt++)
             {
                 await _messageLock.WaitAsync();
@@ -81,31 +69,35 @@ namespace NamedPipeLine.Services
                 {
                     if (!IsValidPipeState())
                     {
-                        if (attempt == MaxRetryAttempts - 1)
-                        {
-                            throw new InvalidOperationException("Pipe is not connected");
-                        }
-                        
-                        _shouldReconnect = true;
-                        await Task.Delay(ReconnectDelay);
+                        await CreateNewPipeAsync();
                     }
 
                     string messageText = _serializer.Serialize(message);
                     await _writer.WriteLineAsync(messageText);
                     await _writer.FlushAsync();
-                    return;
+                }
+                catch (PipeCommunicationException e) when (e.FailureType == PipeCommunicationFailureType.PipeDisconnected &&
+                                                           attempt < MaxRetryAttempts - 1)
+                {
+                    continue;
+                }
+                catch (PipeCommunicationException e) when (e.FailureType == PipeCommunicationFailureType.PipeDisconnected)
+                {
+                    throw new PipeCommunicationException("Pipe is disconnected", PipeCommunicationFailureType.PipeDisconnected, e);
                 }
                 catch (IOException) when (attempt < MaxRetryAttempts - 1)
                 {
-                    _shouldReconnect = true;
-                    await Task.Delay(ReconnectDelay * (attempt + 1));
+                    await Task.Delay(RetryDelay);
+                }
+                catch (Exception e)
+                {
+                    throw new PipeCommunicationException("Failed to send message", PipeCommunicationFailureType.SendFailed, e);
                 }
                 finally
                 {
                     _messageLock.Release();
                 }
             }
-            throw new CommunicationException("Failed to send message");
         }
 
         /// <summary>
@@ -115,11 +107,9 @@ namespace NamedPipeLine.Services
         public async Task StopAsync()
         {
             await _createReleaseLock.WaitAsync();
-
             try
             {
                 _isRunning = false;
-                _heartbeatTimer.Change(Timeout.Infinite, Timeout.Infinite);
                 _cancellationToken.Cancel();
 
                 if (_messageListenerTask != null)
@@ -153,7 +143,6 @@ namespace NamedPipeLine.Services
                 _cancellationToken.Cancel();
                 _createReleaseLock.Dispose();
                 _messageLock.Dispose();
-                _heartbeatTimer.Dispose();
                 CleanupCurrentPipeAsync().Wait();
             }
 
@@ -199,17 +188,13 @@ namespace NamedPipeLine.Services
                 await _pipeServerStream.WaitForConnectionAsync(_cancellationToken.Token);
                 _writer = new StreamWriter(_pipeServerStream) { AutoFlush = true };
                 _reader = new StreamReader(_pipeServerStream);
-                _shouldReconnect = false;
-
-                lock (_heartbeatLock)
-                {
-                    _lastHeartbeatTime = DateTime.Now;
-                }
+                
+                _isRunning = true;
             }
             catch (Exception)
             {
                 await CleanupCurrentPipeAsync();
-                throw;
+                throw new PipeCommunicationException("Pipe is not connected", PipeCommunicationFailureType.PipeDisconnected);
             }
             finally
             {
@@ -244,6 +229,7 @@ namespace NamedPipeLine.Services
                 _pipeServerStream = null;
             }
             
+            _isRunning = false;
         }
 
         /// <summary>
@@ -258,23 +244,16 @@ namespace NamedPipeLine.Services
             {
                 try
                 {
-                    if(_shouldReconnect)
-                    {
-                        await CreateNewPipeAsync();
-                    }
-
                     if (!IsValidPipeState())
                     {
-                        _shouldReconnect = true;
-                        await Task.Delay(1000, linkedTokenSource.Token);
+                        await Task.Delay(RetryDelay, linkedTokenSource.Token);
                         continue;
                     }
 
                     string? messageText = await _reader.ReadLineAsync();
                     if (messageText == null)
                     {
-                        _shouldReconnect = true;
-                        continue;
+                        throw new InvalidOperationException("Received message is null");
                     }
                     
                     var message = _serializer.Deserialize<T>(messageText);
@@ -286,8 +265,7 @@ namespace NamedPipeLine.Services
                 }
                 catch (Exception)
                 {
-                    _shouldReconnect = true;
-                    await Task.Delay(1000, linkedTokenSource.Token);
+                    throw new PipeCommunicationException("Failed to receive message", PipeCommunicationFailureType.ReceiveFailed);
                 }
             }
         }
@@ -308,75 +286,27 @@ namespace NamedPipeLine.Services
             {
                 MessageReceived?.Invoke(this, message);
             }
-            else
-            {
-                await HandleHeartbeatAck(message);
-            }
         }
 
-        /// <summary>
-        /// Heartbeat를 체크하고, 만약 클라이언트와의 연결이 끊어졌다고 판단되면 재연결을 시도합니다.
-        /// 정상적인 경우, Heartbeat 메시지를 전송합니다.
-        /// </summary>
-        /// <param name="state"></param>
-        private async void HeartbeatCheck(object state)
+        private bool IsSafePipe()
         {
-            if (!_isRunning || _shouldReconnect || _isDisposed)
+            if (_pipeServerStream == null)
             {
-                return;
-            }
-
-            try
-            {
-                DateTime lastHeartbeatTime;
-                lock (_heartbeatLock)
-                {
-                    lastHeartbeatTime = _lastHeartbeatTime;
-                }
-                
-                if (lastHeartbeatTime != DateTime.MinValue &&
-                    DateTime.Now - lastHeartbeatTime > TimeSpan.FromMilliseconds(HeartbeatTimeout))
-                {
-                    _shouldReconnect = true;
-                    return;
-                }
-
-                T heartbeat = new T
-                {
-                    MessageType = PipeMessageType.Heartbeat
-                };
-                
-                await SendMessageAsync(heartbeat);
-            }
-            catch (Exception)
-            {
-                _shouldReconnect = true;
-            }
-        }
-
-        /// <summary>
-        /// HeartbeatAck 메시지를 처리합니다.
-        /// 만약, PipeChanged 요구 메시지라면, 재연결을 시도합니다.
-        /// </summary>
-        /// <param name="message"></param>
-        private async Task HandleHeartbeatAck(T? message)
-        {
-            if (message == null)
-            {
-                return;
+                return false;
             }
             
-            if (message.MessageType == PipeMessageType.HeartbeatAck)
+            try
             {
-                lock (_heartbeatLock)
-                {
-                    _lastHeartbeatTime = DateTime.Now;
-                }
+                _pipeServerStream.SafePipeHandle.DangerousGetHandle();
+                return true;
             }
-            else if (message.MessageType == PipeMessageType.PipeChanged)
+            catch (ObjectDisposedException e)
             {
-                _shouldReconnect = true;
-                await Task.Delay(ReconnectDelay);
+                return false;
+            }
+            catch (Exception e)
+            {
+                return false;
             }
         }
         
@@ -390,26 +320,6 @@ namespace NamedPipeLine.Services
                    _reader != null &&
                    _pipeServerStream != null &&
                    _pipeServerStream.IsConnected;
-        }
-
-        /// <summary>
-        /// 객체가 Dispose되었는지 확인하고, Dispose되었다면 예외를 발생시킵니다.
-        /// </summary>
-        /// <exception cref="ObjectDisposedException"></exception>
-        private void ThrowIfDisposed()
-        {
-            if (_isDisposed)
-            {
-                throw new ObjectDisposedException(nameof(NamedPipeServer<T>));
-            }
-        }
-    }
-    
-    public class CommunicationException : Exception
-    {
-        public CommunicationException(string message, Exception? innerException = null) 
-            : base(message, innerException)
-        {
         }
     }
 }

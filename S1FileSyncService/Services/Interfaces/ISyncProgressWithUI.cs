@@ -2,6 +2,7 @@
 
 public interface ISyncProgressWithUI
 {
+    void StartProgress(string fileName, long fileSize);
     /// <summary>
     /// 프로그래스 관련 UI 업데이트
     /// </summary>

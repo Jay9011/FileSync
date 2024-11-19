@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
-	<Product Id="{7800F3F4-7F04-4AA8-9574-2A4B5F2803AF}" Name="S1FileSync" Language="1033" Codepage="65001" Version="1.0.0.0" Manufacturer="SECUiDEA" UpgradeCode="6ed4c294-9800-4c99-85a3-cb6f1a9f8d99">
+	<Product Id="*" Name="S1FileSync" Language="1033" Codepage="65001" Version="!(bind.FileVersion.ServiceEXE)" Manufacturer="SECUiDEA" UpgradeCode="6ed4c294-9800-4c99-85a3-cb6f1a9f8d99">
 		<Package Id="*" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated" 
 		         Keywords="Installer,MSI" Description="S1FileSync - File Synchronization Program" Comments="File Synchronization Program and Service"/>
 
 		<MajorUpgrade Schedule="afterInstallInitialize"
 		              DowngradeErrorMessage="A newer version of [ProductName] is already installed."
-		              AllowSameVersionUpgrades="yes"/>
+		              AllowSameVersionUpgrades="yes"
+		              AllowDowngrades="no"
+		              MigrateFeatures="yes"/>
 
 		<MediaTemplate EmbedCab="yes"/>
 
@@ -49,8 +51,6 @@
 				</CreateFolder>
 			</Component>
 			<Component Id="CleanupMainApplicationFolder" Guid="*">
-				<RemoveFile Id="RemoveFiles" Name="*" On="uninstall"/>
-				<RemoveFolder Id="INSTALLFOLDER" On="uninstall"/>
 				<RegistryValue Root="HKLM" Key="Software\SECUiDEA\S1FileSync"
 							   Name="installed" Type="integer" Value="1" KeyPath="yes"/>
 			</Component>

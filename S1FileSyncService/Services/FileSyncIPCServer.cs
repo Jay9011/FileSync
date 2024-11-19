@@ -1,4 +1,5 @@
 ﻿using NamedPipeLine.Interfaces;
+using NamedPipeLine.Models;
 using NamedPipeLine.Services;
 using S1FileSync.Models;
 
@@ -9,7 +10,6 @@ public class FileSyncIPCServer : IDisposable
     private const string PipeName = "S1FileSyncPipe";
     private readonly IIPCServer<FileSyncMessage> _server;
     private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
-    private bool _isConnected;
     private readonly CancellationTokenSource _cancellationToken = new CancellationTokenSource();
 
     #region 의존 주입
@@ -37,21 +37,18 @@ public class FileSyncIPCServer : IDisposable
         await _connectionLock.WaitAsync(cancellationToken);
         try
         {
-            if (_isConnected)
+            if (_server is { IsPipeValid: true, IsRunning: true })
             {
                 return;
             }
 
             await _server.StartAsync(cancellationToken);
             
-            _isConnected = true;
             _logger.LogInformation("IPC server started successfully");
         }
         catch (Exception e)
         {
-            _isConnected = false;
             _logger.LogError(e, "An error occurred while starting the IPC server");
-            throw;
         }
         finally
         {
@@ -63,18 +60,11 @@ public class FileSyncIPCServer : IDisposable
     {
         try
         {
-            if (!_isConnected)
-            {
-                await RestartServerAsync(cancellationToken);
-            }
-
             await _server.SendMessageAsync(message);
         }
         catch (Exception e)
         {
             _logger.LogError(e, "An error occurred while sending a message");
-            _isConnected = false;
-            throw;
         }
     }
 
@@ -103,11 +93,6 @@ public class FileSyncIPCServer : IDisposable
 
     private async Task RestartServerAsync(CancellationToken cancellationToken)
     {
-        if (_isConnected)
-        {
-            return;
-        }
-
         try
         {
             _logger.LogInformation("Restarting the IPC server...");
@@ -119,7 +104,6 @@ public class FileSyncIPCServer : IDisposable
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to restart the IPC server");
-            throw;
         }
     }
 }

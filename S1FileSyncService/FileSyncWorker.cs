@@ -48,7 +48,7 @@ namespace S1FileSyncService
         {
             try
             {
-                await LoadSettings();
+                LoadSettings();
                 await _ipcServer.StartAsync(stoppingToken);
 
                 _ipcServer.MessageReceived += OnMessageReceived;
@@ -103,7 +103,7 @@ namespace S1FileSyncService
             }
         }
         
-        private async Task LoadSettings()
+        private void LoadSettings()
         {
             _settings = _settingsService.LoadSettings();
             _currentSyncInterval = _settings.SyncIntervalTimeSpan;
@@ -159,7 +159,9 @@ namespace S1FileSyncService
 
                         _logger.LogInformation($"{processPrefix}{connectionStatus} at: {DateTimeOffset.Now}");
                         
-                        await _sendMessage.SendMessageAsync(FileSyncMessageType.ConnectionStatus, connectionStatus, stoppingToken);
+                        await _sendMessage.SendMessageAsync(FileSyncMessageType.ConnectionStatus, 
+                            isConnected ? ConnectionStatusType.Connected : ConnectionStatusType.Disconnected, 
+                            message, stoppingToken);
                     }
                     catch (Exception e) when(e is not SettingsChangedException)
                     {
@@ -219,9 +221,6 @@ namespace S1FileSyncService
                     case FileSyncMessageType.Error:
                         break;
                     case FileSyncMessageType.ServiceCommand:
-                    {
-                        // TODO: 서비스 명령 처리
-                    }
                         break;
                 }
             }

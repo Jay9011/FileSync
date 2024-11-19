@@ -11,80 +11,82 @@ namespace S1FileSync.Services;
 
 public class FileSyncIPCClient : IDisposable
 {
+    private bool _isConnected;
+    public bool IsConnected
+    {
+        get => _isConnected;
+        private set
+        {
+            if (_isConnected == value)
+            {
+                return;
+            }
+            _isConnected = value;
+            OnStatusChanged?.Invoke();
+        }
+    }
+    
     private string _ipcStatus = "Disconnected";
-
     public string IPCStatus
     {
         get { return _ipcStatus; }
         private set
         {
             _ipcStatus = value;
-            OnStatusChanged?.Invoke();
         }
     }
-    
-    private bool _connected;
-
-    public bool Connected
-    {
-        get { return _connected; }
-        private set
-        {
-            _connected = value;
-            OnStatusChanged?.Invoke();
-        }
-    }
-    
-    private string _connectionStatus = "Disconnected";
-
-    public string ConnectionStatus
-    {
-        get { return _connectionStatus; }
-        private set
-        {
-            _connectionStatus = value;
-        }
-    }
-    
-    private const string PipeName = "S1FileSyncPipe";
-    private readonly IIPCClient<FileSyncMessage> _client;
-    private readonly Dispatcher _UIDispatcher;
-
-    #region 의존 주입
-
-    private readonly ILogger<FileSyncIPCClient> _logger;
-    private readonly ITrayIconService _trayIconService;
-    private readonly FileSyncProgressViewModel _progressViewModel;
-
-    #endregion
     
     /// <summary>
     /// 상태 변경 이벤트 연결
     /// </summary>
     public Action OnStatusChanged;
 
-    public FileSyncIPCClient(ILogger<FileSyncIPCClient> logger, ITrayIconService trayIconService, FileSyncProgressViewModel progressViewModel)
+    private const string PipeName = "S1FileSyncPipe";
+    private readonly IIPCClient<FileSyncMessage> _client;
+    private readonly Dispatcher _UIDispatcher;
+    private readonly PeriodicTimer _connectionMonitorTimer;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private Task? _monitorTask;
+
+    #region 의존 주입
+
+    private readonly ILogger<FileSyncIPCClient> _logger;
+    private readonly ITrayIconService _trayIconService;
+    private readonly FileSyncProgressViewModel _progressViewModel;
+    private readonly IRemoteServerConnectionChecker _remoteServerConnectionChecker;
+
+    #endregion
+    
+    public FileSyncIPCClient(ILogger<FileSyncIPCClient> logger, ITrayIconService trayIconService, FileSyncProgressViewModel progressViewModel, IRemoteServerConnectionChecker remoteServerConnectionChecker)
     {
         #region 의존 주입
 
         _logger = logger;
         _trayIconService = trayIconService;
         _progressViewModel = progressViewModel;
+        _remoteServerConnectionChecker = remoteServerConnectionChecker;
 
         #endregion
 
         _client = new NamedPipeClient<FileSyncMessage>(PipeName);
         _client.MessageReceived += OnMessageReceived;
-        _client.ConnectionStateChanged += OnConnectionStateChanged;
+        _client.ConnectAsync();
 
         _UIDispatcher = Application.Current.Dispatcher;
+
+        _connectionMonitorTimer = new PeriodicTimer(TimeSpan.FromSeconds(3));
     }
 
+    /// <summary>
+    /// 서버에 연결
+    /// </summary>
+    /// <param name="cancellationToken"></param>
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             await _client.ConnectAsync(cancellationToken);
+            StartConnectionMonitoring();
         }
         catch (Exception e)
         {
@@ -129,33 +131,19 @@ public class FileSyncIPCClient : IDisposable
                 {
                     if (message.Content.Progress != null)
                     {
-                        UpdateProgress(message.Content.Progress);
+                        _progressViewModel.UpdateProgress(message.Content.Progress);
                     }
                 }
                     break;
                 case FileSyncMessageType.StatusChange:
                 {
-                    if (Enum.TryParse<TrayIconStatus>(message.Content.Message, out var status))
-                    {
-                        _trayIconService.SetStatus(status);
-                    }
+                    ProgramStatusChange(message.Content);
                 }
                     break;
                 case FileSyncMessageType.ConnectionStatus:
                 {
-                    if (!string.IsNullOrEmpty(message.Content.Message) &&
-                        string.Equals(message.Content.Message, "Connected", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ConnectionStatus = "Connected";
-                        Connected = true;
-                        _trayIconService.SetStatus(TrayIconStatus.Normal);
-                    }
-                    else
-                    {
-                        ConnectionStatus = message.Content.Message;
-                        Connected = false;
-                        _trayIconService.SetStatus(TrayIconStatus.Error);
-                    }
+                    var connectionStatusType = message.GetConnectionStatusType();
+                    _remoteServerConnectionChecker.ConnectionChange(connectionStatusType == ConnectionStatusType.Connected, message.GetConnectionStatusMessage());
                 }
                     break;
                 case FileSyncMessageType.Error:
@@ -171,24 +159,56 @@ public class FileSyncIPCClient : IDisposable
         }
     }
 
-    private void OnConnectionStateChanged(object? sender, ConnectionStateChangedEventArgs e)
+    /// <summary>
+    /// 연결 상태 모니터링 시작
+    /// </summary>
+    private void StartConnectionMonitoring()
     {
-        IPCStatus = e.IsConnected ? "Connected" : $"Disconnected: {(e.ErrorMessage != null ? $" ({e.ErrorMessage})" : "")}";
+        _monitorTask = MonitorConnectionAsync();
     }
 
-    private void UpdateProgress(FileSyncProgress progress)
+    /// <summary>
+    /// 모니터링 Task
+    /// </summary>
+    private async Task MonitorConnectionAsync()
     {
-        var item = _progressViewModel.AddOrUpdateItem(progress.FileName, progress.FileSize);
-        if (item != null)
+        try
         {
-            item.Progress = progress.Progress;
-            item.SyncSpeed = progress.Speed;
-            item.IsCompleted = progress.IsCompleted;
+            while (await _connectionMonitorTimer.WaitForNextTickAsync(_cancellationTokenSource.Token))
+            {
+                try
+                {
+                    if (_client.IsConnected)
+                    {
+                        IsConnected = true;
+                        IPCStatus = "Connected";
+                    }
+                    else
+                    {
+                        _logger.LogWarning("IPC connection is lost. Reconnecting...");
+                        IsConnected = false;
+                        IPCStatus = "Disconnected";
+                        await _client.ConnectAsync(_cancellationTokenSource.Token);
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error occurred while monitoring the connection");
+                    IsConnected = false;
+                    IPCStatus = $"Connection error: {e.Message}";
+                }
+            }
         }
-        
-        _progressViewModel.RemoveCompletedItems();
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Connection monitoring task is stopped");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error occurred while monitoring the connection");
+        }
     }
-    
+
     public async Task SendMessageAsync(FileSyncMessage message, CancellationToken cancellationToken = default)
     {
         try
@@ -201,11 +221,42 @@ public class FileSyncIPCClient : IDisposable
         }
     }
     
+    private void ProgramStatusChange(FileSyncContent content)
+    {
+        if (Enum.TryParse<TrayIconStatus>(content.Message, out var status))
+        {
+            _trayIconService.SetStatus(status);
+        }
+        else if (Enum.TryParse<FileSyncStatusType>(content.Message, out var syncStatus))
+        {
+            switch (syncStatus)
+            {
+                case FileSyncStatusType.SyncStart:
+                    _trayIconService.SetStatus(TrayIconStatus.Syncing);
+                    break;
+                case FileSyncStatusType.SyncEnd:
+                    break;
+                case FileSyncStatusType.SyncError:
+                    break;
+            }
+        }
+    }
+    
     public void Dispose()
     {
-        if (_client is IDisposable disposable)
+        try
         {
-            disposable.Dispose();
+            _cancellationTokenSource.Cancel();
+            _monitorTask?.Wait(TimeSpan.FromSeconds(1));
+            _connectionMonitorTimer.Dispose();
+            _cancellationTokenSource.Dispose();
+        }
+        finally
+        {
+            if (_client is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }            
         }
     }
 }

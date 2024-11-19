@@ -32,4 +32,17 @@ public class SyncSendMessage : ISendMessage
             throw;
         }
     }
+
+    public async Task SendMessageAsync(FileSyncMessageType messageType, ConnectionStatusType connectionStatusType, string message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var syncMessage = new FileSyncMessage(messageType, connectionStatusType, message ??= "");
+            await _ipcServer.SendMessageAsync(syncMessage, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            throw;
+        }
+    }
 }

@@ -9,6 +9,8 @@
     <Authors>Jay9011</Authors>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <GenerateTemporaryAssembly>true</GenerateTemporaryAssembly>
+    <FileVersion>1.1.0.0</FileVersion>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

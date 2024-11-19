@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.ServiceProcess;
+﻿using System.ServiceProcess;
 using System.Windows;
 using System.Windows.Input;
 using S1FileSync.Helpers;
@@ -9,24 +8,28 @@ using S1FileSync.Views;
 
 namespace S1FileSync.ViewModels;
 
-public class MainViewModel : ViewModelBase
+public class MainViewModel : ViewModelBase, IDisposable
 {
     #region 의존 주입
 
     public required SyncMonitorView MonitorView { get; set; }
     public required SettingsView SettingsView { get; set; }
     public required FileSyncProgressView ProgressView { get; set; }
-    public required FileSyncProgressViewModel ProgressViewModel { get; set; }
     
+    private readonly IRemoteServerConnectionChecker _remoteServerConnectionChecker;
     private readonly IServiceControlService _serviceControlService;
-    private readonly IPopupService _popupService;
     private readonly FileSyncIPCClient _ipcClient;
+    private readonly IPopupService _popupService;
 
     #endregion
 
     public const double SidebarExpandedWidth = 240;
     public const double SidebarCollapsedWidth = 60;
     public static GridLength SidebarIconColumnWidth = new GridLength(28);
+
+    private readonly PeriodicTimer _monitorTimer;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private Task? _monitorTask;
     
     private bool _isDarkTheme = true;
     public bool IsDarkTheme
@@ -70,25 +73,21 @@ public class MainViewModel : ViewModelBase
         set => SetField(ref _serviceStatus, value);
     }
     
-    private string _ipcStatus = "Disconnected";
     public string IPCStatus
     {
-        get => _ipcStatus;
-        private set => SetField(ref _ipcStatus, value);
+        get => _ipcClient.IPCStatus;
     }
     
-    private bool _isConnected = false;
     public bool IsConnected
     {
-        get => _isConnected;
-        set => SetField(ref _isConnected, value);
+        get => _remoteServerConnectionChecker.RemoteServerConnected;
+        set => _remoteServerConnectionChecker.RemoteServerConnected = value;
     }
     
-    private string _connectionStatus = "Disconnected";
     public string ConnectionStatus
     {
-        get => _connectionStatus;
-        set => SetField(ref _connectionStatus, value);
+        get => _remoteServerConnectionChecker.RemoteServerConnectionStatus;
+        set => _remoteServerConnectionChecker.RemoteServerConnectionStatus = value;
     }
 
     public string _getConnected = "Unknown";
@@ -98,7 +97,7 @@ public class MainViewModel : ViewModelBase
         set => SetField(ref _getConnected, value);
     }
 
-    public bool _getConnectedStatus = false;
+    public bool _getConnectedStatus;
     public bool GetConnectedStatus
     {
         get => _getConnectedStatus;
@@ -111,13 +110,14 @@ public class MainViewModel : ViewModelBase
     public ICommand CheckStatusCommand { get; set; }
     
 
-    public MainViewModel(IServiceControlService serviceControlService, IPopupService popupService, FileSyncIPCClient ipcClient)
+    public MainViewModel(IServiceControlService serviceControlService, IPopupService popupService, FileSyncIPCClient ipcClient, IRemoteServerConnectionChecker remoteServerConnectionChecker)
     {
         #region 의존 주입
 
         _serviceControlService = serviceControlService;
         _popupService = popupService;
         _ipcClient = ipcClient;
+        _remoteServerConnectionChecker = remoteServerConnectionChecker;
 
         #endregion
         
@@ -125,8 +125,28 @@ public class MainViewModel : ViewModelBase
         StopSyncCommand = new RelayCommand(async () => await StopSync());
         CheckStatusCommand = new RelayCommand(async () => await CheckServiceStatus());
         
-        _ = CheckServiceStatus();
-        _ipcClient.OnStatusChanged += OnConnectionStateChanged;
+        _monitorTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        _monitorTask = MonitorService();
+    }
+
+    private async Task MonitorService()
+    {
+        try
+        {
+            while (await _monitorTimer.WaitForNextTickAsync(_cancellationTokenSource.Token))
+            {
+                await CheckServiceStatus();
+                if (!IsServiceRunning)
+                {
+                    IsConnected = false;
+                }
+                SetGetConnected();
+            }
+        }
+        catch (Exception e)
+        {
+            ServiceStatus = $"Error: {e.Message}";
+        }
     }
 
     /// <summary>
@@ -178,34 +198,32 @@ public class MainViewModel : ViewModelBase
             IsServiceRunning = false;
         }
     }
-    
-    /// <summary>
-    /// IPC 연결 상태 변경시 실행되는 이벤트 메서드
-    /// </summary>
-    private void OnConnectionStateChanged()
-    {
-        IPCStatus = _ipcClient.IPCStatus;
-        IsConnected = _ipcClient.Connected;
-        ConnectionStatus = _ipcClient.ConnectionStatus;
 
-        GetConnectedStatus = IsServiceRunning && IsConnected && !string.Equals(IPCStatus, "Disconnected");
-        
-        if (!IsConnected)
-        {
-            GetConnected = ConnectionStatus;
-        }
-        else if (!IsServiceRunning)
+    private void SetGetConnected()
+    {
+        if (!IsServiceRunning)
         {
             GetConnected = ServiceStatus;
+            GetConnectedStatus = false;
+            return;
         }
-        else if (string.Equals(IPCStatus, "Disconnected"))
+        else if (!IsConnected)
         {
-            GetConnected = IPCStatus;
+            GetConnected = ConnectionStatus;
+            GetConnectedStatus = false;
+            return;
         }
-        else if (IsConnected && IsServiceRunning)
+        else if (!_ipcClient.IsConnected)
         {
-            GetConnected = "Connected";
+            GetConnected = _ipcClient.IPCStatus;
         }
+            
+        GetConnected = "Connected";
+        GetConnectedStatus = true;
     }
 
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
 }

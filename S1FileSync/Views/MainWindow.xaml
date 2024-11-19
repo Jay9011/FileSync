@@ -16,7 +16,8 @@
         MaxWidth="{x:Static SystemParameters.MaximizedPrimaryScreenWidth}"
         d:DataContext="{d:DesignInstance Type=model:MainViewModel}"
         Icon="/Assets/app.ico"
-        Opacity="1">
+        Opacity="0"
+        d:Opacity="1">
     <Window.Resources>
         <ResourceDictionary>
             <Storyboard x:Key="SidebarExpandAnimation">

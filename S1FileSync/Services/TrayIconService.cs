@@ -87,6 +87,25 @@ public class TrayIconService : ITrayIconService, IDisposable
     /// <param name="status"></param>
     public void SetStatus(TrayIconStatus status)
     {
+        if (_currentStatus == status)
+        {
+            return;
+        }
+
+        switch (status)
+        {
+            case TrayIconStatus.Normal:
+                break;
+            case TrayIconStatus.Syncing:
+                break;
+            case TrayIconStatus.Error:
+                if (_currentStatus == TrayIconStatus.Syncing)
+                {
+                    return;
+                }
+                break;
+        }
+        
         _currentStatus = status;
 
         switch (status)

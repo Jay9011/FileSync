@@ -25,7 +25,6 @@ namespace NamedPipeLine.Interfaces
     {
         UserMessage,
         PipeChanged,
-        Heartbeat,
-        HeartbeatAck
+        ServiceCommand,
     }
 }

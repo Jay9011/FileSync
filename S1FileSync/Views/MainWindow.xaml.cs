@@ -28,6 +28,8 @@ namespace S1FileSync
         
         public MainWindow(MainViewModel mainViewModel, IServiceProvider serviceProvider, ITrayIconService trayIconService, SettingsView settingsView, SyncMonitorView syncMonitorView, FileSyncProgressView progressView, FileSyncIPCClient ipcClient)
         {
+            bool isAutoStart = Environment.GetCommandLineArgs().Contains("--autostart", StringComparer.OrdinalIgnoreCase);
+            
             InitializeComponent();
 
             #region 의존 주입
@@ -57,6 +59,11 @@ namespace S1FileSync
             _trayIconService.Initialize();
             
             _ = ipcClient.StartAsync();
+
+            if (isAutoStart)
+            {
+                Hide();
+            }
         }
 
         private void WindowOpenRequested(object? sender, EventArgs e)

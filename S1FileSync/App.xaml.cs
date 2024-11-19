@@ -1,15 +1,23 @@
-﻿using System.IO;
+﻿using System.Diagnostics;
+using System.IO;
+using System.Text;
 using System.Windows;
+using System.Windows.Forms;
+using System.Windows.Interop;
 using FileIOHelper;
 using FileIOHelper.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NetConnectionHelper;
 using NetConnectionHelper.Interface;
+using S1FileSync.Helpers;
+using S1FileSync.Models;
 using S1FileSync.Services;
 using S1FileSync.Services.Interface;
 using S1FileSync.ViewModels;
 using S1FileSync.Views;
+using Application = System.Windows.Application;
+using MessageBox = System.Windows.MessageBox;
 
 namespace S1FileSync
 {
@@ -19,6 +27,8 @@ namespace S1FileSync
     public partial class App : Application
     {
         private readonly IHost _host;
+        private static Mutex _mutex;
+        private const string MutexName = "S1FileSync";
 
         public App()
         {
@@ -33,10 +43,22 @@ namespace S1FileSync
         {
             try
             {
+                _mutex = new Mutex(true, MutexName, out bool createdNew);
+
+                if (!createdNew)
+                {
+                    Shutdown();
+                    return;
+                }
+
                 await _host.StartAsync();
             
                 var mainWindow = _host.Services.GetRequiredService<MainWindow>();
-                mainWindow.Show();
+
+                if (!e.Args.Contains("--autostart", StringComparer.OrdinalIgnoreCase))
+                {
+                    mainWindow.Show();
+                }
             
                 base.OnStartup(e);
             }
@@ -47,25 +69,39 @@ namespace S1FileSync
                 Shutdown();
             }
         }
-
+        
         protected override async void OnExit(ExitEventArgs e)
         {
+            if (_mutex != null)
+            {
+                _mutex.ReleaseMutex();
+                _mutex.Dispose();
+            }
+
             using (_host)
             {
                 await _host.StopAsync(TimeSpan.FromSeconds(5));
             }
-            
+
             base.OnExit(e);
         }
 
         private void ConfigureServices(IServiceCollection services)
         {
+            string? exePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            if (exePath == null)
+            {
+                exePath = Directory.GetCurrentDirectory();
+            }
+            string? settingsPath = Path.Combine(exePath, "settings.ini");
+            
             // Services
             services.AddSingleton<ITrayIconService, TrayIconService>();
             services.AddSingleton<IServiceControlService, ServiceControlService>();
+            services.AddSingleton<IRemoteServerConnectionChecker, RemoteServerConnectionChecker>();
             services.AddSingleton<IRemoteConnectionHelper, RemoteConnectionSmbHelper>();
             services.AddSingleton<IPopupService, WindowPopupService>();
-            services.AddSingleton<IIniFileHelper>(sp => new IniFileHelper(Path.Combine(Directory.GetCurrentDirectory(), "settings.ini")));
+            services.AddSingleton<IIniFileHelper>(sp => new IniFileHelper(settingsPath));
             services.AddSingleton<ISettingsService, SettingsService>();
             services.AddSingleton<FileSyncIPCClient>();
 
@@ -80,9 +116,6 @@ namespace S1FileSync
             services.AddSingleton<SettingsView>();
             services.AddSingleton<MainWindow>();
 
-            // Helpers
-            services.AddTransient<IniFileHelper>();
-            
             // dependencies
             services.AddTransient<SettingsViewModel>(sp =>
                 new SettingsViewModel(

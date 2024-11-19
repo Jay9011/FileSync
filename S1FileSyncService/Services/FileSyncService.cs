@@ -69,23 +69,7 @@ public class FileSyncService : IFileSync
                 return;
             }
 
-            try
-            {
-                await _sendMessage.SendMessageAsync(FileSyncMessageType.StatusChange, TrayIconStatus.Syncing.ToString());
-            }
-            catch (Exception)
-            {
-            }
-            
             await SyncDirectory(settings.LocalLocation, remoteUncPath, settings);
-
-            try
-            {
-                await _sendMessage.SendMessageAsync(FileSyncMessageType.StatusChange, TrayIconStatus.Normal.ToString());
-            }
-            catch (Exception)
-            {
-            }
         }
         catch (Exception e)
         {
@@ -289,6 +273,9 @@ public class FileSyncService : IFileSync
             _logger.LogWarning($"디스크 여유 공간이 부족합니다: {destinationFilePath}");
             return;
         }
+        
+        // 파일 동기화 시도 시작
+        _syncProgressUI.StartProgress(Path.GetFileName(sourceFileInfo.Name), sourceFileInfo.Length);
 
         for (int attempts = 0; attempts <= MaxRetries; attempts++)
         {
