@@ -20,4 +20,9 @@ public interface ITrayIconService
     /// </summary>
     /// <param name="status"></param>
     void SetStatus(TrayIconStatus status);
+    /// <summary>
+    /// 트레이 아이콘 상태 조회
+    /// </summary>
+    /// <returns></returns>
+    TrayIconStatus GetStatus();
 }

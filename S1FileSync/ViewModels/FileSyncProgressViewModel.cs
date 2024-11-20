@@ -2,22 +2,36 @@
 using System.Windows.Forms;
 using System.Windows.Threading;
 using S1FileSync.Models;
+using S1FileSync.Services;
+using S1FileSync.Services.Interface;
 
 namespace S1FileSync.ViewModels;
 
 public class FileSyncProgressViewModel : ViewModelBase
 {
+    public ObservableCollection<FileSyncProgressItem> SyncItems { get; }
+
     private readonly Dispatcher _dispatcher;
-    private const int ResetProgressInterval = 24;
-    
+    private readonly TimeSpan ResetProgressInterval = new TimeSpan(0, 0, 10, 0);
+
     private readonly PeriodicTimer _checkTimer;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private Task? _itemCheckTask;
-    
-    public ObservableCollection<FileSyncProgressItem> SyncItems { get; }
 
-    public FileSyncProgressViewModel()
+    #region 의존 주입
+
+    private readonly ITrayIconService _trayIconService;
+
+    #endregion
+ 
+    public FileSyncProgressViewModel(ITrayIconService trayIconService)
     {
+        #region 의존 주입
+
+        _trayIconService = trayIconService;
+        
+        #endregion
+        
         _dispatcher = Dispatcher.CurrentDispatcher;
         SyncItems = new ObservableCollection<FileSyncProgressItem>();
         
@@ -25,7 +39,7 @@ public class FileSyncProgressViewModel : ViewModelBase
         _itemCheckTask = ItemCheck();
     }
 
-    public FileSyncProgressItem AddOrUpdateItem(string fileName, long fileSize)
+    public FileSyncProgressItem AddOrFindItem(string fileName, long fileSize)
     {
         FileSyncProgressItem item = null;
 
@@ -50,17 +64,23 @@ public class FileSyncProgressViewModel : ViewModelBase
         return item;
     }
 
-    public void RemoveCompletedItems()
+    public void RemoveCompletedItems(bool remainShortlyItem = true)
     {
         _dispatcher.Invoke(() =>
         {
-            var itemsToRemove = SyncItems.Where(item =>
-                item.IsCompleted
-                && DateTime.Now.Subtract(item.LastSyncTime).TotalHours >= ResetProgressInterval).ToList();
+            var itemsToRemove = SyncItems.Where(
+                item => item.IsCompleted && 
+                        (!remainShortlyItem || (DateTime.Now - item.LastSyncTime) > ResetProgressInterval)
+                ).ToList();
 
             foreach (var item in itemsToRemove)
             {
                 SyncItems.Remove(item);
+            }
+
+            if (SyncItems.All(item => item.IsCompleted))
+            {
+                OnAllItemsCompleted();
             }
         });
     }
@@ -71,7 +91,7 @@ public class FileSyncProgressViewModel : ViewModelBase
     /// <param name="progress"></param>
     public void UpdateProgress(FileSyncProgress progress)
     {
-        var item = AddOrUpdateItem(progress.FileName, progress.FileSize);
+        var item = AddOrFindItem(progress.FileName, progress.FileSize);
         if (item == null)
         {
             return;
@@ -81,6 +101,14 @@ public class FileSyncProgressViewModel : ViewModelBase
         item.IsCompleted = progress.IsCompleted;
     }
     
+    private void OnAllItemsCompleted()
+    {
+        if (_trayIconService.GetStatus() == TrayIconStatus.Syncing)
+        {
+            _trayIconService.SetStatus(TrayIconStatus.Normal);   
+        }
+    }
+
     private async Task ItemCheck()
     {
         try

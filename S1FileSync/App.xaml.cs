@@ -8,6 +8,7 @@ using FileIOHelper;
 using FileIOHelper.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Toolkit.Uwp.Notifications;
 using NetConnectionHelper;
 using NetConnectionHelper.Interface;
 using S1FileSync.Helpers;
@@ -47,6 +48,7 @@ namespace S1FileSync
 
                 if (!createdNew)
                 {
+                    NativeMethod.MessageBox(IntPtr.Zero, "Another instance of the application is already running.", "S1 File Sync", NativeMethod.MB_OK | NativeMethod.MB_ICONINFORMATION);
                     Shutdown();
                     return;
                 }

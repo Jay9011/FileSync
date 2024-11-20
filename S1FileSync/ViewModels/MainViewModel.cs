@@ -19,6 +19,7 @@ public class MainViewModel : ViewModelBase, IDisposable
     private readonly IRemoteServerConnectionChecker _remoteServerConnectionChecker;
     private readonly IServiceControlService _serviceControlService;
     private readonly FileSyncIPCClient _ipcClient;
+    private readonly ITrayIconService _trayIconService;
     private readonly IPopupService _popupService;
 
     #endregion
@@ -65,6 +66,14 @@ public class MainViewModel : ViewModelBase, IDisposable
         get => _isServiceRunning;
         set => SetField(ref _isServiceRunning, value);
     }
+
+    private bool _isServiceStopped;
+
+    public bool IsServiceStopped
+    {
+        get => _isServiceStopped;
+        set => SetField(ref _isServiceStopped, value);
+    }
     
     private string _serviceStatus = "Unknown";
     public string ServiceStatus
@@ -73,9 +82,11 @@ public class MainViewModel : ViewModelBase, IDisposable
         set => SetField(ref _serviceStatus, value);
     }
     
+    private string _ipcStatus = "Disconnected";
     public string IPCStatus
     {
-        get => _ipcClient.IPCStatus;
+        get => _ipcStatus;
+        set => SetField(ref _ipcStatus, value);
     }
     
     public bool IsConnected
@@ -107,10 +118,11 @@ public class MainViewModel : ViewModelBase, IDisposable
 
     public ICommand StartSyncCommand { get; set; }
     public ICommand StopSyncCommand { get; set; }
+    public ICommand ClearItemList { get; set; }
     public ICommand CheckStatusCommand { get; set; }
     
 
-    public MainViewModel(IServiceControlService serviceControlService, IPopupService popupService, FileSyncIPCClient ipcClient, IRemoteServerConnectionChecker remoteServerConnectionChecker)
+    public MainViewModel(IServiceControlService serviceControlService, IPopupService popupService, FileSyncIPCClient ipcClient, IRemoteServerConnectionChecker remoteServerConnectionChecker, ITrayIconService trayIconService)
     {
         #region 의존 주입
 
@@ -118,13 +130,15 @@ public class MainViewModel : ViewModelBase, IDisposable
         _popupService = popupService;
         _ipcClient = ipcClient;
         _remoteServerConnectionChecker = remoteServerConnectionChecker;
+        _trayIconService = trayIconService;
 
         #endregion
         
         StartSyncCommand = new RelayCommand(async () => await StartSync());
         StopSyncCommand = new RelayCommand(async () => await StopSync());
         CheckStatusCommand = new RelayCommand(async () => await CheckServiceStatus());
-        
+        ClearItemList = new RelayCommand(async () => await ItemListClear());
+
         _monitorTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         _monitorTask = MonitorService();
     }
@@ -140,7 +154,7 @@ public class MainViewModel : ViewModelBase, IDisposable
                 {
                     IsConnected = false;
                 }
-                SetGetConnected();
+                await SetGetConnected();
             }
         }
         catch (Exception e)
@@ -180,7 +194,16 @@ public class MainViewModel : ViewModelBase, IDisposable
             ServiceStatus = $"Error: {e.Message}";
         }
     }
-    
+
+    /// <summary>
+    /// 동기화 화면의 ItemList를 초기화하는 이벤트 메서드
+    /// </summary>
+    /// <returns></returns>
+    private async Task ItemListClear()
+    {
+        ProgressView.ProgressListClear();
+    }
+
     /// <summary>
     /// 서비스 상태 확인시 실행되는 이벤트 메서드
     /// </summary>
@@ -189,6 +212,26 @@ public class MainViewModel : ViewModelBase, IDisposable
         try
         {
             var status = await _serviceControlService.GetServiceStatusAsync();
+
+            if (status == ServiceControllerStatus.Stopped)
+            {
+                IsServiceStopped = true;
+            }
+            else
+            {
+                IsServiceStopped = false;
+            }
+
+            if (status != ServiceControllerStatus.Running)
+            {
+                StoppingServiceProgress();
+            }
+            else if (!IsServiceRunning && 
+                     status == ServiceControllerStatus.Running)
+            {
+                RunningServiceProgress();
+            }
+
             IsServiceRunning = status == ServiceControllerStatus.Running;
             ServiceStatus = status?.ToString() ?? "Not found";
         }
@@ -199,27 +242,43 @@ public class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void SetGetConnected()
+    private async Task SetGetConnected()
     {
+        GetConnectedStatus = false;
+        IPCStatus = _ipcClient.IPCStatus;
+
         if (!IsServiceRunning)
         {
             GetConnected = ServiceStatus;
-            GetConnectedStatus = false;
+            await _ipcClient.StopAsync();
+            IPCStatus = _ipcClient.IPCStatus;
             return;
         }
         else if (!IsConnected)
         {
             GetConnected = ConnectionStatus;
-            GetConnectedStatus = false;
             return;
         }
-        else if (!_ipcClient.IsConnected)
-        {
-            GetConnected = _ipcClient.IPCStatus;
-        }
-            
+
         GetConnected = "Connected";
         GetConnectedStatus = true;
+    }
+
+    private void StoppingServiceProgress()
+    {
+        if (_trayIconService.GetStatus() != TrayIconStatus.Stop)
+        {
+            _trayIconService.SetStatus(TrayIconStatus.Stop);
+        }
+    }
+
+    private void RunningServiceProgress()
+    {
+        if (_trayIconService.GetStatus() == TrayIconStatus.Stop ||
+            _trayIconService.GetStatus() == TrayIconStatus.Error)
+        {
+            _trayIconService.SetStatus(TrayIconStatus.Normal);
+        }
     }
 
     public void Dispose()

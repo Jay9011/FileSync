@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Interop;
 using System.Windows.Media.Animation;
 using S1FileSync.Helpers;
+using S1FileSync.Models;
 using S1FileSync.Services;
 using S1FileSync.Services.Interface;
 using S1FileSync.ViewModels;
@@ -49,15 +51,16 @@ namespace S1FileSync
             
             DataContext = mainViewModel;
             
-            SizeChanged += OnWindowSizeChanged;
-            
             // 트레이 아이콘 서비스
             _trayIconService.WindowOpenRequested += WindowOpenRequested;
             _trayIconService.ShutdownRequested += ShutdownRequested;
-            StateChanged += MainWindowStateChanged;
-            Closing += MainWindowClosing;
             _trayIconService.Initialize();
-            
+
+            // 윈도우 상태 변경 감지
+            StateChanged += MainWindowStateChanged;
+            SizeChanged += OnWindowSizeChanged;
+            Closing += MainWindowClosing;
+
             _ = ipcClient.StartAsync();
 
             if (isAutoStart)
@@ -99,7 +102,7 @@ namespace S1FileSync
             e.Cancel = true;
             Hide();
         }
-
+        
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();

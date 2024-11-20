@@ -74,7 +74,8 @@ public class FileSyncIPCClient : IDisposable
 
         _UIDispatcher = Application.Current.Dispatcher;
 
-        _connectionMonitorTimer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+        _connectionMonitorTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        StartConnectionMonitoring();
     }
 
     /// <summary>
@@ -85,13 +86,35 @@ public class FileSyncIPCClient : IDisposable
     {
         try
         {
-            await _client.ConnectAsync(cancellationToken);
-            StartConnectionMonitoring();
+            if (!_client.IsConnected)
+            {
+                await _client.ConnectAsync(cancellationToken);
+            }
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to start the IPC client");
             throw;
+        }
+    }
+    
+    public async Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (_client.IsConnected)
+            {
+                await _client.DisconnectAsync();
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to stop the IPC client");
+            IsConnected = _client.IsConnected;
+            if (!IsConnected)
+            {
+                IPCStatus = "Disconnected";
+            }
         }
     }
 
@@ -174,7 +197,7 @@ public class FileSyncIPCClient : IDisposable
     {
         try
         {
-            while (await _connectionMonitorTimer.WaitForNextTickAsync(_cancellationTokenSource.Token))
+            do
             {
                 try
                 {
@@ -197,7 +220,7 @@ public class FileSyncIPCClient : IDisposable
                     IsConnected = false;
                     IPCStatus = $"Connection error: {e.Message}";
                 }
-            }
+            } while (await _connectionMonitorTimer.WaitForNextTickAsync(_cancellationTokenSource.Token));
         }
         catch (OperationCanceledException)
         {

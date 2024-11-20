@@ -14,6 +14,7 @@ public enum TrayIconStatus
 {
     Normal,
     Syncing,
+    Stop,
     Error
 }
 
@@ -98,6 +99,8 @@ public class TrayIconService : ITrayIconService, IDisposable
                 break;
             case TrayIconStatus.Syncing:
                 break;
+            case TrayIconStatus.Stop:
+                break;
             case TrayIconStatus.Error:
                 if (_currentStatus == TrayIconStatus.Syncing)
                 {
@@ -118,13 +121,22 @@ public class TrayIconService : ITrayIconService, IDisposable
                 UpdateIcon(IconColor.Green, true);
                 _notifyIcon!.Text = "S1FileSync - Syncronizing...";
                 break;
+            case TrayIconStatus.Stop:
+                UpdateIcon(IconColor.Red, false);
+                _notifyIcon!.Text = "S1FileSync - Stopped";
+                break;
             case TrayIconStatus.Error:
                 UpdateIcon(IconColor.Red, false);
                 _notifyIcon!.Text = "S1FileSync - Error";
                 break;
         }
     }
-    
+
+    public TrayIconStatus GetStatus()
+    {
+        return _currentStatus;
+    }
+
     public void Dispose()
     {
         _notifyIcon?.Dispose();

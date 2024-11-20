@@ -61,13 +61,13 @@ public class SyncProgressUI : ISyncProgressWithUI
         }
     }
 
-    public void CompleteProgress(string fileName)
+    public void CompleteProgress(string fileName, long fileSize)
     {
         try
         {
             var progressData = new FileSyncProgress(
                 FileName: fileName,
-                FileSize: 0,
+                FileSize: fileSize,
                 Progress: 100,
                 Speed: 0,
                 IsCompleted: true

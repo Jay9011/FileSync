@@ -316,7 +316,7 @@ public class FileSyncService : IFileSync
                 }
 
                 File.SetLastWriteTimeUtc(destinationFilePath, sourceFileInfo.LastWriteTimeUtc);
-                _syncProgressUI.CompleteProgress(Path.GetFileName(sourceFileInfo.Name));
+                _syncProgressUI.CompleteProgress(Path.GetFileName(sourceFileInfo.Name), sourceFileInfo.Length);
                 return;
             }
             catch (IOException e) when (attempts < MaxRetries)

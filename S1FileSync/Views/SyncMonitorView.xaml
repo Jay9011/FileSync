@@ -67,18 +67,26 @@
         <Border DockPanel.Dock="Bottom"
                 Margin="0,16,0,0"
                 Padding="5">
-            <StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Right">
-                <Button Content="Stop Sync"
-                        Command="{Binding StopSyncCommand}"
-                        Style="{StaticResource OutlineButtonStyle}"
-                        Margin="0,0,15,0"
-                        IsEnabled="{Binding IsServiceRunning}"/>
-                <Button Content="Start Sync"
-                        Command="{Binding StartSyncCommand}"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        IsEnabled="{Binding IsServiceRunning, Converter={StaticResource InverseBoolConverter}}"/>
-            </StackPanel>
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left"
+                            Orientation="Horizontal">
+                    <Button Content="Clear List"
+                            Command="{Binding ClearItemList}"
+                            Style="{StaticResource OutlineButtonStyle}"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right"
+                            Orientation="Horizontal">
+                    <Button Content="Stop Sync"
+                            Command="{Binding StopSyncCommand}"
+                            Style="{StaticResource OutlineButtonStyle}"
+                            Margin="0,0,15,0"
+                            IsEnabled="{Binding IsServiceRunning}"/>
+                    <Button Content="Start Sync"
+                            Command="{Binding StartSyncCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            IsEnabled="{Binding IsServiceStopped}"/>
+                </StackPanel>
+            </DockPanel>
         </Border>
 
         <ContentControl Content="{Binding ProgressView}">

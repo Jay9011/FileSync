@@ -72,6 +72,7 @@ public class FileSyncIPCServer : IDisposable
     {
         _cancellationToken.Cancel();
         _connectionLock.Dispose();
+        _server.StopAsync();
         if (_server is IDisposable disposable)
         {
             disposable.Dispose();

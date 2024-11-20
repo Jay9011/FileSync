@@ -282,6 +282,9 @@ namespace S1FileSyncService
         public override Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Stopping the service");
+            
+            _ipcServer.Dispose();
+            _cancellationTokenSource.Cancel();
             _workerCts.Cancel();
             return base.StopAsync(cancellationToken);
         }

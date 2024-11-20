@@ -63,12 +63,14 @@ namespace NamedPipeLine.Services
 
         public async Task ConnectAsync(CancellationToken cancellationToken = default)
         {
+            await _connectionLock.WaitAsync(cancellationToken);
+            
             if (_isRunning && IsConnected)
             {
+                _connectionLock.Release();
                 return;
             }
             
-            await _connectionLock.WaitAsync(cancellationToken);
             try
             {
                 await CreateNewConnectionAsync(cancellationToken);
