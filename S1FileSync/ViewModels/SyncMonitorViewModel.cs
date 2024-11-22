@@ -46,7 +46,7 @@ namespace S1FileSync.ViewModels
             StartSyncCommand = new RelayCommand(async () => await StartSync(),
                 canExecute: () => (ServiceControlService.Status == ServiceControllerStatus.Stopped));
             StopSyncCommand = new RelayCommand(async () => await StopSync(),
-                canExecute: () => (serviceControlService.Status == ServiceControllerStatus.Running));
+                canExecute: () => (ServiceControlService.Status == ServiceControllerStatus.Running));
             
             ClearItemList = new RelayCommand(async () => await ItemListClear());
             
