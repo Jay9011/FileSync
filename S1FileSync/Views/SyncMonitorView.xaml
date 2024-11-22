@@ -5,7 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:S1FileSync.Views"
              xmlns:model="clr-namespace:S1FileSync.ViewModels"
-             d:DataContext="{d:DesignInstance Type=model:MainViewModel}"
+             xmlns:converters="clr-namespace:S1FileSync.Converters"
+             d:DataContext="{d:DesignInstance Type=model:SyncMonitorViewModel}"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
@@ -42,13 +43,23 @@
                             Background="{DynamicResource HoverColor}"
                             CornerRadius="16"
                             Padding="12,6">
-                        <TextBlock Text="{Binding GetConnected}"
-                                   FontSize="14">
+                        <TextBlock FontSize="14">
+                            <TextBlock.Text>
+                                <MultiBinding>
+                                    <MultiBinding.Converter>
+                                        <converters:ConnectionStatusConverter/>
+                                    </MultiBinding.Converter>
+                                    <Binding Path="ServiceControlService.Status"/>
+                                    <Binding Path="ServiceControlService.StatusMessage"/>
+                                    <Binding Path="RemoteServerConnectionChecker.RemoteServerConnected"/>
+                                    <Binding Path="RemoteServerConnectionChecker.RemoteServerConnectionStatus"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="{DynamicResource SecondaryTextColor}"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding GetConnectedStatus}" Value="True">
+                                        <DataTrigger Binding="{Binding Path=IsConnected}"  Value="True">
                                             <Setter Property="Foreground" Value="{DynamicResource GreenColor}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -59,7 +70,7 @@
                 </Grid>
 
                 <TextBlock Grid.Row="1"
-                           Text="{Binding IPCStatus}"
+                           Text="{Binding IpcClient.IPCStatus}"
                            Foreground="{DynamicResource SecondaryTextColor}"/>
             </Grid>
         </Border>
@@ -79,12 +90,10 @@
                     <Button Content="Stop Sync"
                             Command="{Binding StopSyncCommand}"
                             Style="{StaticResource OutlineButtonStyle}"
-                            Margin="0,0,15,0"
-                            IsEnabled="{Binding IsServiceRunning}"/>
+                            Margin="0,0,15,0"/>
                     <Button Content="Start Sync"
                             Command="{Binding StartSyncCommand}"
-                            Style="{StaticResource PrimaryButtonStyle}"
-                            IsEnabled="{Binding IsServiceStopped}"/>
+                            Style="{StaticResource PrimaryButtonStyle}"/>
                 </StackPanel>
             </DockPanel>
         </Border>

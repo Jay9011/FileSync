@@ -238,16 +238,14 @@
             </MenuItem>
             <MenuItem Header="Sync">
                 <MenuItem Header="Start Synchronization"
-                          Command="{Binding StartSyncCommand}"
-                          IsEnabled="{Binding IsServiceRunning, Converter={StaticResource InverseBoolConverter}}"/>
+                          Command="{Binding StartSyncCommand}"/>
                 <MenuItem Header="Stop Synchronization"
-                          Command="{Binding StopSyncCommand}"
-                          IsEnabled="{Binding IsServiceRunning}"/>
+                          Command="{Binding StopSyncCommand}"/>
                 <Separator/>
                 <MenuItem Header="Service Status">
-                    <MenuItem Header="{Binding ServiceStatus}" IsEnabled="False"/>
+                    <MenuItem Header="{Binding ServiceControlService.StatusMessage}" IsEnabled="False"/>
                     <MenuItem Header="IPC Connection:" IsEnabled="False"/>
-                    <MenuItem Header="{Binding IPCStatus}" IsEnabled="False"/>
+                    <MenuItem Header="{Binding IpcClient.IPCStatus}" IsEnabled="False"/>
                 </MenuItem>
             </MenuItem>
         </Menu>

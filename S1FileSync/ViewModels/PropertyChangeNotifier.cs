@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace S1FileSync.ViewModels;
 
-public class ViewModelBase : INotifyPropertyChanged
+public class PropertyChangeNotifier : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 

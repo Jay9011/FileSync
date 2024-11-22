@@ -9,7 +9,7 @@ using S1FileSync.Services.Interface;
 
 namespace S1FileSync.ViewModels;
 
-public class SettingsViewModel : ViewModelBase
+public class SettingsViewModel : PropertyChangeNotifier
 {
     #region 의존 주입
 

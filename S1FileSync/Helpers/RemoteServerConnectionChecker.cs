@@ -1,29 +1,24 @@
 ﻿using S1FileSync.Services.Interface;
+using S1FileSync.ViewModels;
 
 namespace S1FileSync.Services;
 
-public class RemoteServerConnectionChecker : IRemoteServerConnectionChecker
+public class RemoteServerConnectionChecker : PropertyChangeNotifier, IRemoteServerConnectionChecker
 {
-    private bool _remoteServerConnected;
+    private bool _remoteServerConnected = false;
 
     public bool RemoteServerConnected
     {
-        get { return _remoteServerConnected; }
-        set
-        {
-            _remoteServerConnected = value;
-        }
+        get => _remoteServerConnected;
+        set => SetField(ref _remoteServerConnected, value);
     }
     
     private string _RemoteServerConnectionStatus = "Disconnected";
 
     public string RemoteServerConnectionStatus
     {
-        get { return _RemoteServerConnectionStatus; }
-        set
-        {
-            _RemoteServerConnectionStatus = value;
-        }
+        get => _RemoteServerConnectionStatus;
+        set => SetField(ref _RemoteServerConnectionStatus, value);
     }
 
     public void ConnectionChange(bool isConnected, string message)

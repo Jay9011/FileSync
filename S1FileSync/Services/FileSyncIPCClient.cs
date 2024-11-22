@@ -9,38 +9,22 @@ using S1FileSync.ViewModels;
 
 namespace S1FileSync.Services;
 
-public class FileSyncIPCClient : IDisposable
+public class FileSyncIPCClient : PropertyChangeNotifier, IDisposable
 {
     private bool _isConnected;
     public bool IsConnected
     {
         get => _isConnected;
-        private set
-        {
-            if (_isConnected == value)
-            {
-                return;
-            }
-            _isConnected = value;
-            OnStatusChanged?.Invoke();
-        }
+        private set => SetField(ref _isConnected, value);
     }
     
     private string _ipcStatus = "Disconnected";
     public string IPCStatus
     {
         get { return _ipcStatus; }
-        private set
-        {
-            _ipcStatus = value;
-        }
+        private set => SetField(ref _ipcStatus, value);
     }
     
-    /// <summary>
-    /// 상태 변경 이벤트 연결
-    /// </summary>
-    public Action OnStatusChanged;
-
     private const string PipeName = "S1FileSyncPipe";
     private readonly IIPCClient<FileSyncMessage> _client;
     private readonly Dispatcher _UIDispatcher;
@@ -98,6 +82,10 @@ public class FileSyncIPCClient : IDisposable
         }
     }
     
+    /// <summary>
+    /// 서버와의 연결 해제
+    /// </summary>
+    /// <param name="cancellationToken"></param>
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -244,6 +232,10 @@ public class FileSyncIPCClient : IDisposable
         }
     }
     
+    /// <summary>
+    /// 프로그램 상태 변경
+    /// </summary>
+    /// <param name="content"></param>
     private void ProgramStatusChange(FileSyncContent content)
     {
         if (Enum.TryParse<TrayIconStatus>(content.Message, out var status))

@@ -109,6 +109,7 @@ namespace S1FileSync
 
             // ViewModels
             services.AddSingleton<FileSyncProgressViewModel>();
+            services.AddSingleton<SyncMonitorViewModel>();
             services.AddSingleton<SettingsViewModel>();
             services.AddSingleton<MainViewModel>();
 

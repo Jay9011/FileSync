@@ -5,10 +5,10 @@ namespace S1FileSync.Views
 {
     public partial class SyncMonitorView : UserControl
     {
-        public SyncMonitorView(MainViewModel mainViewModel)
+        public SyncMonitorView(SyncMonitorViewModel syncMonitorViewModel)
         {
             InitializeComponent();
-            DataContext = mainViewModel;
+            DataContext = syncMonitorViewModel;
         }
     }
 }

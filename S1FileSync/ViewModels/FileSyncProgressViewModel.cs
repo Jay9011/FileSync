@@ -7,7 +7,7 @@ using S1FileSync.Services.Interface;
 
 namespace S1FileSync.ViewModels;
 
-public class FileSyncProgressViewModel : ViewModelBase
+public class FileSyncProgressViewModel : PropertyChangeNotifier
 {
     public ObservableCollection<FileSyncProgressItem> SyncItems { get; }
 

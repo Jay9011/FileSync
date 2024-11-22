@@ -5,6 +5,14 @@ namespace S1FileSync.Services.Interface;
 public interface IServiceControlService
 {
     /// <summary>
+    /// 서비스 상태
+    /// </summary>
+    public ServiceControllerStatus Status { get; }
+    /// <summary>
+    /// 서비스 상태 메시지
+    /// </summary>
+    public string StatusMessage { get; set; }
+    /// <summary>
     /// 서비스 시작
     /// </summary>
     /// <returns></returns>

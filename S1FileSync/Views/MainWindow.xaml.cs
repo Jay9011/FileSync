@@ -18,7 +18,6 @@ namespace S1FileSync
         #region 의존 주입
 
         private readonly MainViewModel _viewModel;
-        private readonly IServiceProvider _serviceProvider;
         private readonly ITrayIconService _trayIconService;
 
         #endregion
@@ -28,7 +27,7 @@ namespace S1FileSync
         private Storyboard? _expeandSidebarStoryboard;
         private Storyboard? _collapseSidebarStoryboard;
         
-        public MainWindow(MainViewModel mainViewModel, IServiceProvider serviceProvider, ITrayIconService trayIconService, SettingsView settingsView, SyncMonitorView syncMonitorView, FileSyncProgressView progressView, FileSyncIPCClient ipcClient)
+        public MainWindow(MainViewModel mainViewModel, ITrayIconService trayIconService, SettingsView settingsView, SyncMonitorView syncMonitorView, FileSyncIPCClient ipcClient)
         {
             bool isAutoStart = Environment.GetCommandLineArgs().Contains("--autostart", StringComparer.OrdinalIgnoreCase);
             
@@ -37,13 +36,11 @@ namespace S1FileSync
             #region 의존 주입
 
             _viewModel = mainViewModel;
-            _serviceProvider = serviceProvider;
             _trayIconService = trayIconService;
 
             #endregion
 
             mainViewModel.MonitorView = syncMonitorView;
-            mainViewModel.ProgressView = progressView;
             mainViewModel.SettingsView = settingsView;
             
             _expeandSidebarStoryboard = FindResource("SidebarExpandAnimation") as Storyboard;

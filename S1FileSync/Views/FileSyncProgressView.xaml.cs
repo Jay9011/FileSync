@@ -10,12 +10,4 @@ public partial class FileSyncProgressView : UserControl
         InitializeComponent();
         DataContext = viewModel;
     }
-
-    public void ProgressListClear()
-    {
-        if (DataContext is FileSyncProgressViewModel viewModel)
-        {
-            viewModel.RemoveCompletedItems(false);
-        }
-    }
 }
