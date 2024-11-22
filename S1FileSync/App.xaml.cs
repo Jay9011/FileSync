@@ -118,14 +118,6 @@ namespace S1FileSync
             services.AddSingleton<SyncMonitorView>();
             services.AddSingleton<SettingsView>();
             services.AddSingleton<MainWindow>();
-
-            // dependencies
-            services.AddTransient<SettingsViewModel>(sp =>
-                new SettingsViewModel(
-                    sp.GetRequiredService<IRemoteConnectionHelper>(),
-                    sp.GetRequiredService<IPopupService>(),
-                    sp.GetRequiredService<ISettingsService>()
-                ));
         }
     }
 
